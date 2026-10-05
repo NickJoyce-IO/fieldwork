@@ -1,0 +1,22 @@
+{
+  "name": "fieldwork",
+  "private": true,
+  "description": "Free, open-source, test-driven learning Projects for Kotlin and TypeScript-on-Node, worked entirely through Git and GitHub",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "tracks/typescript-on-node/runner"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm test --workspaces"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

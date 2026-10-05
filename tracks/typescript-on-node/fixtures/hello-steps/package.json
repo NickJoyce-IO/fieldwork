@@ -1,0 +1,13 @@
+{
+  "name": "hello-steps",
+  "private": true,
+  "type": "module",
+  "description": "Fixture Project used to exercise the TypeScript-on-Node runner",
+  "scripts": {
+    "test": "node ../../runner/src/cli.ts test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

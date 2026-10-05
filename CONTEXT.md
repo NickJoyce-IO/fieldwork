@@ -27,6 +27,12 @@ _Avoid_: Exercise, kata, module, lesson
 One slice of a Project covering a single concept, defined by a small set of failing tests the Learner makes pass in roughly fifteen minutes.
 _Avoid_: Task, exercise, stage
 
+**Current Step**:
+The first Step in a Project whose tests do not yet pass locally. It is where the Learner is working now.
+
+**Locked Step**:
+Any Step after the Current Step. Its instructions and tests are visible, but it is not checked until every earlier Step passes.
+
 **Completed Step**:
 A Step whose work has been merged to `main` of the Learner's Project repository with its tests passing in CI. GitHub is the sole record of progress.
 _Avoid_: Submitted, checked off

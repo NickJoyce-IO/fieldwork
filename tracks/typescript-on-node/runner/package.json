@@ -1,0 +1,14 @@
+{
+  "name": "@fieldwork/typescript-on-node-runner",
+  "private": true,
+  "description": "Learner-side commands for TypeScript-on-Node Projects",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}
