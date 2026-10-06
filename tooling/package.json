@@ -1,0 +1,17 @@
+{
+  "name": "@fieldwork/tooling",
+  "private": true,
+  "description": "Maintainer-side commands for the Fieldwork monorepo (never shipped to Learners)",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "fieldwork": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

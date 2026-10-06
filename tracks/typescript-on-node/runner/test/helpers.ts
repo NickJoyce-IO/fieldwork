@@ -72,7 +72,12 @@ export interface RunResult {
  * node:test, so the child inherits NODE_TEST_CONTEXT unless a test overrides it.
  */
 export function runTest(projectDir: string, env: NodeJS.ProcessEnv = {}): RunResult {
-  return run(process.execPath, [cliPath, "test"], projectDir, env);
+  return runCli(projectDir, ["test"], env);
+}
+
+/** Runs the runner CLI with arbitrary arguments in a directory. */
+export function runCli(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): RunResult {
+  return run(process.execPath, [cliPath, ...args], cwd, env);
 }
 
 /** Runs `npm test` in a Project, the way a Learner does. */

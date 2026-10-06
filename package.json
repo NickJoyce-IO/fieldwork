@@ -9,11 +9,13 @@
     "node": ">=24"
   },
   "workspaces": [
+    "tooling",
     "tracks/typescript-on-node/runner"
   ],
   "scripts": {
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm test --workspaces"
+    "test": "npm test --workspaces",
+    "fieldwork": "node tooling/src/cli.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
