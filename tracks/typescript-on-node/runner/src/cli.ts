@@ -10,7 +10,10 @@ interface Command {
 }
 
 const commands: Record<string, Command> = {
-  test: { summary: "Run Steps in order up to the Current Step", run: testCommand },
+  test: {
+    summary: "Run Steps in order up to the Current Step (--step N for one Step, --watch to rerun on save)",
+    run: testCommand,
+  },
 };
 
 // node:test marks its child processes with NODE_TEST_CONTEXT, and run() skips
