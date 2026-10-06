@@ -1,6 +1,7 @@
 // Maintainer-side commands for the Fieldwork monorepo (ADR-0002). These run in
 // monorepo CI and on maintainers' machines, and are never shipped to Learners.
 // Learner-side commands live in each Track's runner instead.
+import { publishCommand } from "./commands/publish.ts";
 import { verifyCommand } from "./commands/verify.ts";
 
 interface Command {
@@ -9,9 +10,10 @@ interface Command {
   run: (args: string[]) => Promise<number>;
 }
 
-// Each maintainer command registers itself here, e.g. publish (#5).
+// Each maintainer command registers itself here.
 const commands: Record<string, Command> = {
   verify: { summary: "Check Projects' Steps against their starter code and Reference Solutions", run: verifyCommand },
+  publish: { summary: "Write a template repository's file tree for a Project", run: publishCommand },
 };
 
 const [name, ...args] = process.argv.slice(2);
@@ -26,5 +28,11 @@ if (command === undefined) {
   );
   process.exitCode = 2;
 } else {
-  process.exitCode = await command.run(args);
+  // As in the Learner-side runner, a command that cannot run at all exits 2.
+  try {
+    process.exitCode = await command.run(args);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 2;
+  }
 }

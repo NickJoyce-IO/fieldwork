@@ -6,6 +6,7 @@ How a Project is laid out in this monorepo, and which parts reach the Learner. T
 
 - `tooling/`: maintainer-side commands (`npm run fieldwork -- <command>`), such as `verify` and `publish`. Never shipped to Learners (ADR-0002).
 - `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, later `update` and `setup`). Shipped inside every published Project of the Track.
+- `tracks/<track>/template/`: files every published Project of the Track gets as they are, such as the PR workflow and the devcontainer.
 - `tracks/<track>/projects/<project>/`: real Projects.
 - `tracks/<track>/fixtures/<project>/`: small Projects used to test the tooling, laid out exactly like real ones.
 
@@ -28,3 +29,21 @@ solutions/<step-id>/  Reference Solution for one Step (monorepo only)
 - To check a Step's Reference Solution, replace each path in the Project with the same path from the snapshot (usually just `src/`) and run the Track's `test`. The solution for Step N must pass Steps 1..N and fail Step N+1. That is what `verify` enforces, along with the starter code in `src/` passing no Step, each Step checked on its own.
 - Run `npm run fieldwork -- verify <project-dir>` to check one Project, or `npm run fieldwork -- verify` to check every Project under `tracks/*/projects/`. Monorepo CI runs the latter on every PR and push to `main`.
 - `solutions/` is never published to a Learner's Project repository.
+
+## What `publish` produces
+
+`npm run fieldwork -- publish <project-dir> --out <dir>` writes a template repository's file tree into an empty directory. It copies an allow-list, so anything else in the source Project, `solutions/` above all, never reaches it.
+
+```
+fieldwork.json        copied as is, so the version is the one in the source Project
+package.json          the source's, minus `description`, with `npm test` pointed at .fieldwork/ and Node and npm pinned as in the monorepo
+tsconfig.json         copied as is
+.nvmrc                the monorepo's
+src/                  the starter code, which becomes Learner Code
+steps/                Project Content
+.fieldwork/           the Track's runner (`tracks/<track>/runner/src/`)
+README.md             generated from fieldwork.json
+.github/, .devcontainer/, .gitignore   from tracks/<track>/template/
+```
+
+The PR workflow runs `npm test` and copies its output into the check summary. Exit code 1 means the Current Step is unfinished, which a pull request may leave it, so the check passes. Any other non-zero exit means the Steps could not run, and the check fails.

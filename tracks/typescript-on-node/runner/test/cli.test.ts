@@ -19,3 +19,10 @@ test("no command prints usage and exits 2", () => {
   assert.match(output, /Commands:\n {2}test/);
   assert.equal(exitCode, 2);
 });
+
+test("a command that cannot run reports the error and exits 2, not 1, which means an unfinished Step", () => {
+  const { exitCode, output } = runCli(fixturesDir, ["test"]);
+
+  assert.match(output, /fieldwork\.json/);
+  assert.equal(exitCode, 2);
+});

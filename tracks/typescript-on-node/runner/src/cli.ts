@@ -10,7 +10,10 @@ interface Command {
 }
 
 const commands: Record<string, Command> = {
-  test: { summary: "Run Steps in order up to the Current Step", run: testCommand },
+  test: {
+    summary: "Run Steps in order up to the Current Step (--step N for one Step, --watch to rerun on save)",
+    run: testCommand,
+  },
 };
 
 // node:test marks its child processes with NODE_TEST_CONTEXT, and run() skips
@@ -30,5 +33,12 @@ if (command === undefined) {
   );
   process.exitCode = 2;
 } else {
-  process.exitCode = await command.run(args);
+  // Exit code 1 means "the Current Step is unfinished" (the PR workflow relies
+  // on it), so a command that cannot run at all exits 2 instead.
+  try {
+    process.exitCode = await command.run(args);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 2;
+  }
 }
