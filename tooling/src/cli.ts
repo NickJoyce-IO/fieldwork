@@ -2,6 +2,7 @@
 // monorepo CI and on maintainers' machines, and are never shipped to Learners.
 // Learner-side commands live in each Track's runner instead.
 import { publishCommand } from "./commands/publish.ts";
+import { verifyCommand } from "./commands/verify.ts";
 
 interface Command {
   summary: string;
@@ -9,8 +10,9 @@ interface Command {
   run: (args: string[]) => Promise<number>;
 }
 
-// Each maintainer command registers itself here, e.g. verify (#4).
+// Each maintainer command registers itself here.
 const commands: Record<string, Command> = {
+  verify: { summary: "Check Projects' Steps against their starter code and Reference Solutions", run: verifyCommand },
   publish: { summary: "Write a template repository's file tree for a Project", run: publishCommand },
 };
 

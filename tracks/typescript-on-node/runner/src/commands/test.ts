@@ -155,6 +155,7 @@ async function checkStep(project: Project, index: number, allTypeErrors: TypeDia
   const label = stepLabel(index, step);
   const results = await runStepTests(stepDir(project, step));
   const typeErrors = typeErrorsForStep(allTypeErrors, step);
+  // Monorepo `verify` counts these "✔ Step" lines (tooling/src/tracks.ts).
   if (stepTestsPass(results) && typeErrors.length === 0) return { passed: true, line: `✔ ${label}`, typeErrors };
 
   const details = [describeStepTests(results)];
