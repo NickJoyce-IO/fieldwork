@@ -21,6 +21,7 @@ export async function testCommand(_args: string[]): Promise<number> {
     const results = await runStepTests(stepDir(project, step));
     const typeErrors = typeErrorsForStep(allTypeErrors, step);
     if (stepTestsPass(results) && typeErrors.length === 0) {
+      // Monorepo `verify` counts these "✔ Step" lines (tooling/src/tracks.ts).
       lines.push(`✔ ${label}`);
       continue;
     }

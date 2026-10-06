@@ -1,11 +1,16 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { trackRunner, type StepRun } from "./tracks.ts";
+import { trackRunner } from "./tracks.ts";
+
+interface StepDefinition {
+  id: string;
+  title: string;
+}
 
 interface ProjectMetadata {
   name: string;
   track: string;
-  steps: { id: string; title: string }[];
+  steps: StepDefinition[];
 }
 
 export interface Verdict {
@@ -31,10 +36,15 @@ export function verifyProject(projectDir: string): Verdict {
   const problems: string[] = [];
   const workDir = makeWorkingCopy(projectDir);
   try {
-    const starter = runSteps(workDir);
-    if (starter.passedSteps > 0) {
-      problems.push(`${label(0)}: the starter code passes it, but starter code must not pass any Step`);
+    // The Track's test stops at the first failing Step, so each Step is
+    // checked against the starter code on its own.
+    for (const [index, step] of steps.entries()) {
+      writeMetadata(workDir, { ...metadata, steps: [step] });
+      if (runSteps(workDir).passedSteps > 0) {
+        problems.push(`${label(index)}: the starter code passes it, but starter code must not pass any Step`);
+      }
     }
+    writeMetadata(workDir, metadata);
 
     for (const [index, step] of steps.entries()) {
       const solutionDir = join(projectDir, "solutions", step.id);
@@ -46,7 +56,7 @@ export function verifyProject(projectDir: string): Verdict {
       const run = runSteps(workDir);
       if (run.passedSteps <= index) {
         problems.push(
-          `${label(index)}: its Reference Solution must pass Steps 1..${index + 1}, but fails ${label(run.passedSteps)}\n${indent(run)}`,
+          `${label(index)}: its Reference Solution must pass Steps 1..${index + 1}, but fails ${label(run.passedSteps)}\n${indent(run.output)}`,
         );
       } else if (run.passedSteps > index + 1) {
         problems.push(
@@ -75,6 +85,11 @@ function makeWorkingCopy(projectDir: string): string {
   return workDir;
 }
 
+/** Rewrites the working copy's fieldwork.json, e.g. to list a single Step. */
+function writeMetadata(workDir: string, metadata: ProjectMetadata): void {
+  writeFileSync(join(workDir, "fieldwork.json"), JSON.stringify(metadata, null, 2));
+}
+
 /** A Reference Solution is a snapshot: each top-level path in it replaces the same path in the Project. */
 function applySolution(workDir: string, solutionDir: string): void {
   for (const entry of readdirSync(solutionDir)) {
@@ -83,7 +98,7 @@ function applySolution(workDir: string, solutionDir: string): void {
   }
 }
 
-function indent({ output }: StepRun): string {
+function indent(output: string): string {
   return output
     .trimEnd()
     .split(/\r?\n/)

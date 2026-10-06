@@ -93,3 +93,22 @@ test("with no directories, verifies every Project in the monorepo", () => {
   assert.doesNotMatch(output, /Usage/);
   assert.equal(exitCode, 0);
 });
+
+test("fails when the starter code passes a later Step, even though it fails Step 1", () => {
+  const project = brokenHelloSteps({
+    "src/greet.ts": `export function greet(name: string): string {
+  throw new Error("Not implemented yet");
+}
+
+export function farewell(name?: string): string {
+  return \`Goodbye, \${name ?? "everyone"}!\`;
+}
+`,
+  });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /hello-steps, Step 2 "Say goodbye": the starter code passes it/);
+  assert.doesNotMatch(output, /Step 1 "Greet someone": the starter code passes it/);
+  assert.equal(exitCode, 1);
+});
