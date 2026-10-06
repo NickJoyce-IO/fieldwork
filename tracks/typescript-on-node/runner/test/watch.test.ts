@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { farewellStep, greetSolved, greetStep } from "./fixture-steps.ts";
+import { farewellStep, greetSolved, greetStep, greetUnsolved } from "./fixture-steps.ts";
 import { makeProject, startCli } from "./helpers.ts";
-
-const greetUnsolved = `export function greet(name: string): string {
-  throw new Error("Not implemented yet");
-}
-`;
 
 const watching = /Watching for changes/;
 
@@ -41,4 +36,19 @@ test("--watch with --step reruns only that Step when its tests change", async (t
   const rerun = await cli.waitFor(watching);
   assert.match(rerun, /✘ Step 1: Greet someone \(0\/1 tests passing\)/);
   assert.doesNotMatch(rerun, /Step 2/);
+});
+
+test("--watch keeps watching after a run fails to complete", async (t) => {
+  const dir = makeProject({ steps: [greetStep], learnerCode: { "src/greet.ts": greetSolved } });
+  const cli = startCli(dir, ["test", "--watch"]);
+  t.after(() => cli.stop());
+  await cli.waitFor(watching);
+
+  // The Step's folder disappears mid-edit, so the run cannot read its tests.
+  const stepFolder = join(dir, "steps", greetStep.id);
+  renameSync(stepFolder, `${stepFolder}-moved`);
+  assert.match(await cli.waitFor(watching), /Could not run the Steps: .*ENOENT/);
+
+  renameSync(`${stepFolder}-moved`, stepFolder);
+  assert.match(await cli.waitFor(watching), /✔ Step 1: Greet someone/);
 });

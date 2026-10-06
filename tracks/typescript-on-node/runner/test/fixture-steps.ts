@@ -1,5 +1,10 @@
 // Steps shared by the process-level tests, used to build fixture Projects.
 
+export const greetUnsolved = `export function greet(name: string): string {
+  throw new Error("Not implemented yet");
+}
+`;
+
 export const greetSolved = `export function greet(name: string): string {
   return \`Hello, \${name}!\`;
 }

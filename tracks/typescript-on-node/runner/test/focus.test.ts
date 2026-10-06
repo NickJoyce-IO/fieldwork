@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { farewellStep, greetStep, shoutStep } from "./fixture-steps.ts";
+import { farewellStep, greetStep, greetUnsolved, shoutStep } from "./fixture-steps.ts";
 import { makeProject, runTest } from "./helpers.ts";
 
-const farewellSolved = `export function greet(name: string): string {
-  throw new Error("Not implemented yet");
-}
-
+// Step 2 solved while Step 1 is still unsolved.
+const onlyFarewellSolved = `${greetUnsolved}
 export function farewell(name = "everyone"): string {
   return \`Goodbye, \${name}!\`;
 }
@@ -15,7 +13,7 @@ export function farewell(name = "everyone"): string {
 test("--step runs only that Step, even when an earlier Step is failing", () => {
   const dir = makeProject({
     steps: [greetStep, farewellStep, shoutStep],
-    learnerCode: { "src/greet.ts": farewellSolved },
+    learnerCode: { "src/greet.ts": onlyFarewellSolved },
   });
 
   const { exitCode, output } = runTest(dir, {}, ["--step", "2"]);
@@ -30,7 +28,7 @@ test("--step reports a failing Step with its own type errors only, and exits 1",
   // Steps 2 and 3 import functions the Learner has not written yet.
   const dir = makeProject({
     steps: [greetStep, farewellStep, shoutStep],
-    learnerCode: { "src/greet.ts": farewellSolved.slice(0, farewellSolved.indexOf("export function farewell")) },
+    learnerCode: { "src/greet.ts": greetUnsolved },
   });
 
   const { exitCode, output } = runTest(dir, {}, ["--step", "3"]);
@@ -42,7 +40,7 @@ test("--step reports a failing Step with its own type errors only, and exits 1",
 });
 
 test("--step with a Step number the Project does not have prints a clear error and exits 2", () => {
-  const dir = makeProject({ steps: [greetStep, farewellStep], learnerCode: { "src/greet.ts": farewellSolved } });
+  const dir = makeProject({ steps: [greetStep, farewellStep], learnerCode: { "src/greet.ts": onlyFarewellSolved } });
 
   for (const value of ["3", "0", "-1", "1.5", "two", ""]) {
     const { exitCode, output } = runTest(dir, {}, [`--step=${value}`]);
@@ -54,7 +52,7 @@ test("--step with a Step number the Project does not have prints a clear error a
 });
 
 test("--step without a number prints a clear error and exits 2", () => {
-  const dir = makeProject({ steps: [greetStep], learnerCode: { "src/greet.ts": farewellSolved } });
+  const dir = makeProject({ steps: [greetStep], learnerCode: { "src/greet.ts": onlyFarewellSolved } });
 
   const { exitCode, output } = runTest(dir, {}, ["--step"]);
 

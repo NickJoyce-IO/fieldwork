@@ -1,7 +1,7 @@
 import { watch as watchDir, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { loadProject, stepDir, type Project, type StepDefinition } from "../project.ts";
+import { loadProject, stepDir, stepsFolder, type Project, type StepDefinition } from "../project.ts";
 import { describeStepTests, runStepTests, stepTestsPass } from "../run-step-tests.ts";
 import { typeCheck, typeErrorsForStep, type TypeDiagnostic } from "../type-check.ts";
 
@@ -30,12 +30,12 @@ export async function testCommand(args: string[]): Promise<number> {
     }
   }
 
-  const run = async () => {
+  const runAndPrint = async () => {
     const report = stepIndex === undefined ? await runInOrder(project) : await runOne(project, stepIndex);
     console.log(report.lines.join("\n"));
     return report.exitCode;
   };
-  return values.watch ? watch(project, run) : run();
+  return values.watch ? watch(project, runAndPrint) : runAndPrint();
 }
 
 const usage = "Usage: fieldwork test [--step N] [--watch]";
@@ -48,23 +48,31 @@ function parseStepNumber(value: string, project: Project): number | undefined {
 }
 
 /** The folders whose changes trigger a rerun: Learner Code and Step folders. */
-const watchedFolders = ["src", "steps"];
+const watchedFolders = ["src", stepsFolder];
 
 /**
  * Runs, then reruns after every change until the process is stopped. Changes
  * arriving mid-run queue one more run. Resolves only if watching fails.
  */
-async function watch(project: Project, run: () => Promise<number>): Promise<number> {
+async function watch(project: Project, runAndPrint: () => Promise<number>): Promise<number> {
   let running = false;
   let rerunQueued = false;
+  let stopped = false;
   let debounce: NodeJS.Timeout | undefined;
 
-  const runAndWait = async () => {
+  const runAndWait = async (): Promise<void> => {
     running = true;
-    if (process.stdout.isTTY) console.clear();
-    await run();
+    try {
+      if (process.stdout.isTTY) console.clear();
+      await runAndPrint();
+    } catch (error) {
+      // e.g. a Step folder renamed mid-edit: report it and wait for the next change.
+      console.error(`Could not run the Steps: ${(error as Error).message}`);
+    } finally {
+      running = false;
+    }
+    if (stopped) return;
     console.log(`\nWatching for changes in ${watchedFolders.map((folder) => `${folder}/`).join(" and ")} (Ctrl+C to stop)`);
-    running = false;
     if (rerunQueued) {
       rerunQueued = false;
       await runAndWait();
@@ -73,7 +81,7 @@ async function watch(project: Project, run: () => Promise<number>): Promise<numb
 
   const onChange = () => {
     clearTimeout(debounce);
-    // Editors often write a file in several steps; wait for them to settle.
+    // Editors often save a file in several writes; wait for them to settle.
     debounce = setTimeout(() => {
       if (running) rerunQueued = true;
       else void runAndWait();
@@ -83,6 +91,7 @@ async function watch(project: Project, run: () => Promise<number>): Promise<numb
   return new Promise((resolve) => {
     const watchers: FSWatcher[] = [];
     const fail = (error: Error) => {
+      stopped = true;
       watchers.forEach((watcher) => watcher.close());
       clearTimeout(debounce);
       console.error(`Stopped watching: ${error.message}`);
