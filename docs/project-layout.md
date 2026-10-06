@@ -35,7 +35,7 @@ solutions/<step-id>/  Reference Solution for one Step (monorepo only)
 
 ```
 fieldwork.json        copied as is, so the version is the one in the source Project
-package.json          the source's, with `npm test` pointed at .fieldwork/ and Node and npm pinned as in the monorepo
+package.json          the source's, minus `description`, with `npm test` pointed at .fieldwork/ and Node and npm pinned as in the monorepo
 tsconfig.json         copied as is
 .nvmrc                the monorepo's
 src/                  the starter code, which becomes Learner Code

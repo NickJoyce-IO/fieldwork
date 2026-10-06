@@ -26,5 +26,11 @@ if (command === undefined) {
   );
   process.exitCode = 2;
 } else {
-  process.exitCode = await command.run(args);
+  // As in the Learner-side runner, a command that cannot run at all exits 2.
+  try {
+    process.exitCode = await command.run(args);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 2;
+  }
 }

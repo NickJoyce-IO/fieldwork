@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const monorepoDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 /** Where the Track's Learner-side commands live in a published Project. */
-const runnerDir = ".fieldwork";
+const publishedRunnerDir = ".fieldwork";
 
 interface ProjectMetadata {
   name: string;
@@ -41,15 +41,17 @@ export async function publishCommand(args: string[]): Promise<number> {
   // The Track's Learner-side commands (ADR-0002), and its static files: the PR
   // workflow, the devcontainer and so on.
   const trackDir = join(monorepoDir, "tracks", metadata.track);
-  cpSync(join(trackDir, "runner", "src"), join(outDir, runnerDir), { recursive: true });
+  cpSync(join(trackDir, "runner", "src"), join(outDir, publishedRunnerDir), { recursive: true });
   cpSync(join(trackDir, "template"), outDir, { recursive: true });
 
   // Learners get the Node and npm versions the monorepo is built and graded with.
   const monorepoPackage = readJson(join(monorepoDir, "package.json"));
   const packageJson = readJson(join(projectDir, "package.json"));
-  packageJson.scripts = { ...(packageJson.scripts as object), test: `node ${runnerDir}/cli.ts test` };
+  packageJson.scripts = { ...(packageJson.scripts as object), test: `node ${publishedRunnerDir}/cli.ts test` };
   packageJson.packageManager = monorepoPackage.packageManager;
   packageJson.engines = monorepoPackage.engines;
+  // The source Project's description is written for maintainers, not Learners.
+  delete packageJson.description;
   writeJson(join(outDir, "package.json"), packageJson);
   cpSync(join(monorepoDir, ".nvmrc"), join(outDir, ".nvmrc"));
   writeFileSync(join(outDir, "README.md"), projectReadme(metadata));

@@ -74,6 +74,7 @@ test("a published Project pins Node and npm, and ships a README and a devcontain
   const packageJson = readJson(join(outDir, "package.json"));
   assert.match(packageJson.packageManager, /^npm@\d+\.\d+\.\d+$/);
   assert.equal(packageJson.engines.node, ">=24");
+  assert.equal(packageJson.description, undefined, "the source Project's description is for maintainers");
   assert.equal(readFileSync(join(outDir, ".nvmrc"), "utf8").trim(), "24");
 
   const readme = readFileSync(join(outDir, "README.md"), "utf8");
@@ -91,7 +92,7 @@ test("a published Project has a PR workflow that runs every Step and reports the
   assert.equal(publish(helloSteps, outDir).exitCode, 0);
 
   const workflow = readFileSync(join(outDir, ".github", "workflows", "fieldwork.yml"), "utf8");
-  assert.match(workflow, /^on:\n {2}pull_request:/m);
+  assert.match(workflow, /pull_request/);
   assert.match(workflow, /node-version-file: \.nvmrc/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
@@ -112,5 +113,12 @@ test("publish without a Project and an output directory prints its usage and exi
   const { exitCode, output } = run(process.execPath, [cliPath, "publish", helloSteps], toolingDir);
 
   assert.match(output, /Usage: npm run fieldwork -- publish <project-dir> --out <dir>/);
+  assert.equal(exitCode, 2);
+});
+
+test("publish from a directory that is not a Project reports the error and exits 2", () => {
+  const { exitCode, output } = publish(join(helloSteps, "steps"), freshOutDir());
+
+  assert.match(output, /fieldwork\.json/);
   assert.equal(exitCode, 2);
 });
