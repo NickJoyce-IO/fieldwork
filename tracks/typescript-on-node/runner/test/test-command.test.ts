@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { join } from "node:path";
+import { farewellStep, greetSolved, greetStep, pairStep, shoutStep } from "./fixture-steps.ts";
 import { fixturesDir, makeProject, runNpmTest, runTest } from "./helpers.ts";
 
 test("npm test in the hello-steps fixture Project shows Step 1 as current", () => {
@@ -10,60 +11,6 @@ test("npm test in the hello-steps fixture Project shows Step 1 as current", () =
   assert.match(output, /🔒 Step 2: Say goodbye/);
   assert.equal(exitCode, 1);
 });
-
-const greetSolved = `export function greet(name: string): string {
-  return \`Hello, \${name}!\`;
-}
-`;
-
-const greetStep = {
-  id: "01-greet",
-  title: "Greet someone",
-  files: {
-    "greet.test.ts": `import assert from "node:assert/strict";
-import { test } from "node:test";
-import { greet } from "../../src/greet.ts";
-
-test("greets by name", () => {
-  assert.equal(greet("Ada"), "Hello, Ada!");
-});
-`,
-  },
-};
-
-const farewellStep = {
-  id: "02-farewell",
-  title: "Say goodbye",
-  files: {
-    "farewell.test.ts": `import assert from "node:assert/strict";
-import { test } from "node:test";
-import { farewell } from "../../src/greet.ts";
-
-test("says goodbye by name", () => {
-  assert.equal(farewell("Ada"), "Goodbye, Ada!");
-});
-
-test("says goodbye to everyone when no name is given", () => {
-  assert.equal(farewell(), "Goodbye, everyone!");
-});
-`,
-  },
-};
-
-const shoutStep = {
-  id: "03-shout",
-  title: "Shout",
-  files: {
-    "shout.test.ts": `import assert from "node:assert/strict";
-import { test } from "node:test";
-import { shout } from "../../src/greet.ts";
-
-test("shouts", () => {
-  assert.equal(shout("hi"), "HI!");
-});
-`,
-  },
-};
 
 test("stops at the first failing Step, showing its test count and the locked Steps after it", () => {
   const dir = makeProject({
@@ -125,20 +72,6 @@ test("type errors in later Steps' tests do not block or clutter the current Step
   assert.match(output, /🔒 Step 3: Shout/);
   assert.notEqual(exitCode, 0);
 });
-
-const pairStep = {
-  id: "01-pair",
-  title: "Type a pair",
-  files: {
-    "pair.test.ts": `import type { Pair } from "../../src/pair.ts";
-
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-type Expect<T extends true> = T;
-
-export type Cases = [Expect<Equal<Pair<number>, [number, number]>>];
-`,
-  },
-};
 
 test("a type-only Step fails while its compile-time assertions fail", () => {
   const dir = makeProject({
