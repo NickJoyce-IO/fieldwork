@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { brokenHelloSteps, helloSteps, runFieldwork } from "./helpers.ts";
+import { brokenHelloSteps, helloSteps, publishedHelloSteps, runFieldwork } from "./helpers.ts";
 
 test("the hello-steps fixture Project passes verify", () => {
   const { exitCode, output } = runFieldwork(["verify", helloSteps]);
@@ -110,5 +110,118 @@ export function farewell(name?: string): string {
 
   assert.match(output, /hello-steps, Step 2 "Say goodbye": the starter code passes it/);
   assert.doesNotMatch(output, /Step 1 "Greet someone": the starter code passes it/);
+  assert.equal(exitCode, 1);
+});
+
+/** hello-steps' fieldwork.json, re-versioned. */
+function helloStepsAt(version: string): string {
+  return JSON.stringify(
+    {
+      name: "hello-steps",
+      version,
+      track: "typescript-on-node",
+      steps: [
+        { id: "01-greet", title: "Greet someone" },
+        { id: "02-farewell", title: "Say goodbye" },
+      ],
+    },
+    null,
+    2,
+  );
+}
+
+// Step 1 made stricter: names are now capitalised. Its new Reference
+// Solutions pass, but the published Step 1 solution no longer does.
+const greetCapitalised = `export function greet(name: string): string {
+  return \`Hello, \${name[0]!.toUpperCase()}\${name.slice(1)}!\`;
+}
+`;
+const stricterGreet = {
+  "steps/01-greet/greet.test.ts": `import assert from "node:assert/strict";
+import { test } from "node:test";
+import { greet } from "../../src/greet.ts";
+
+test("greets by name, capitalised", () => {
+  assert.equal(greet("ada"), "Hello, Ada!");
+});
+`,
+  "solutions/01-greet/src/greet.ts": greetCapitalised,
+  "solutions/02-farewell/src/greet.ts": `${greetCapitalised}
+export function farewell(name?: string): string {
+  return \`Goodbye, \${name ?? "everyone"}!\`;
+}
+`,
+};
+
+test("fails when a minor version makes a published Step's tests fail its published Reference Solution", () => {
+  const project = publishedHelloSteps({ ...stricterGreet, "fieldwork.json": helloStepsAt("0.2.0") });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(
+    output,
+    /hello-steps, Step 1 "Greet someone": its tests now fail its Reference Solution from hello-steps@0\.1\.0/,
+  );
+  assert.match(output, /bump the major version/);
+  assert.equal(exitCode, 1);
+});
+
+test("passes when a major version makes a published Step stricter", () => {
+  const project = publishedHelloSteps({ ...stricterGreet, "fieldwork.json": helloStepsAt("1.0.0") });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /✔ hello-steps/);
+  assert.equal(exitCode, 0);
+});
+
+test("passes when a minor version adds a Step at the end and changes instructions and Hints", () => {
+  const project = publishedHelloSteps({
+    "fieldwork.json": JSON.stringify({
+      ...JSON.parse(helloStepsAt("0.2.0")),
+      steps: [
+        { id: "01-greet", title: "Greet someone" },
+        { id: "02-farewell", title: "Say goodbye" },
+        { id: "03-shout", title: "Shout a greeting" },
+      ],
+    }),
+    "steps/01-greet/README.md": "# Greet someone\n\nClearer instructions.\n",
+    "steps/01-greet/HINTS.md": "A template literal helps here.\n",
+    "steps/03-shout/README.md": "# Shout a greeting\n",
+    "steps/03-shout/shout.test.ts": `import assert from "node:assert/strict";
+import { test } from "node:test";
+import { shout } from "../../src/greet.ts";
+
+test("shouts a greeting", () => {
+  assert.equal(shout("Ada"), "HELLO, ADA!");
+});
+`,
+    "solutions/03-shout/src/greet.ts": `${farewellSolved}
+export function shout(name: string): string {
+  return greet(name).toUpperCase();
+}
+`,
+  });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /✔ hello-steps/);
+  assert.equal(exitCode, 0);
+});
+
+test("fails when a minor version removes or reorders a published Step", () => {
+  const project = publishedHelloSteps({
+    "fieldwork.json": JSON.stringify({
+      ...JSON.parse(helloStepsAt("0.2.0")),
+      steps: [{ id: "01-greet", title: "Greet someone" }],
+    }),
+  });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(
+    output,
+    /hello-steps, Step 2 "Say goodbye" from hello-steps@0\.1\.0 is no longer Step 2.*bump the major version/,
+  );
   assert.equal(exitCode, 1);
 });

@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { trackRunner } from "./tracks.ts";
+import { lastPublished, majorVersion } from "./published.ts";
+import { trackRunner, type TrackRunner } from "./tracks.ts";
 
 interface StepDefinition {
   id: string;
@@ -9,6 +10,7 @@ interface StepDefinition {
 
 interface ProjectMetadata {
   name: string;
+  version: string;
   track: string;
   steps: StepDefinition[];
 }
@@ -67,7 +69,51 @@ export function verifyProject(projectDir: string): Verdict {
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }
+  problems.push(...publishedStepProblems(projectDir, metadata, runSteps, label));
   return { project: metadata.name, problems };
+}
+
+/**
+ * The Project Update promise: within a major version, published Steps never get
+ * stricter. So each published Step's published Reference Solution must still
+ * pass Steps 1..N as they stand now, or a Learner who completed them would see
+ * them fail after updating.
+ */
+function publishedStepProblems(
+  projectDir: string,
+  metadata: ProjectMetadata,
+  runSteps: TrackRunner,
+  label: (index: number) => string,
+): string[] {
+  const published = lastPublished(projectDir, metadata.name);
+  if (published === undefined || majorVersion(metadata.version) !== majorVersion(published.version)) return [];
+
+  const problems: string[] = [];
+  const workDir = makeWorkingCopy(projectDir);
+  try {
+    const solutionsDir = join(workDir, ".published-solutions");
+    published.extractSolutions(solutionsDir);
+    for (const [index, step] of published.steps.entries()) {
+      // A Learner's Completed Steps are counted in order, so a published Step
+      // must stay where it was.
+      if (metadata.steps[index]?.id !== step.id) {
+        problems.push(
+          `Step ${index + 1} "${step.title}" from ${published.tag} is no longer Step ${index + 1}, so Learners who completed it would lose it after a ${metadata.version} update. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
+        );
+        break;
+      }
+      applySolution(workDir, join(solutionsDir, step.id));
+      const run = runSteps(workDir);
+      if (run.passedSteps <= index) {
+        problems.push(
+          `${label(index)}: its tests now fail its Reference Solution from ${published.tag}, so Learners who completed it would fail it after a ${metadata.version} update. Within a major version published Steps must not get stricter: bump the major version, or loosen the tests\n${indent(run.output)}`,
+        );
+      }
+    }
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+  return problems;
 }
 
 /**

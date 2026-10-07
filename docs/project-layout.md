@@ -30,6 +30,21 @@ solutions/<step-id>/  Reference Solution for one Step (monorepo only)
 - Run `npm run fieldwork -- verify <project-dir>` to check one Project, or `npm run fieldwork -- verify` to check every Project under `tracks/*/projects/`. Monorepo CI runs the latter on every PR and push to `main`.
 - `solutions/` is never published to a Learner's Project repository.
 
+## Versions and the semver guard
+
+A Project's `version` in `fieldwork.json` follows semver, as Project Updates rely on it:
+
+- **Major:** may change existing Steps' tests incompatibly, or remove or reorder Steps.
+- **Minor:** adds Steps at the end, or changes Hints and instructions.
+- **Patch:** fixes only.
+
+Publishing a Project to its template repository (from monorepo CI, #21) tags the monorepo commit it published from as `<name>@<version>`, for example `hello-steps@0.1.0`. `verify` compares the Project with its highest tagged version. If the Project's current version has the same major version, then for each published Step N:
+
+- Step N must still be Step N, with the same `id`.
+- Step N's Reference Solution **as published** must pass Steps 1..N as they stand now. If it doesn't, the Step got stricter, and a Learner who completed it would fail it after updating.
+
+The failure names the Step and asks for a major version bump. A Project with no tag has never been published, so the guard doesn't apply to it. CI checks out the full history so the tags are there.
+
 ## What `publish` produces
 
 `npm run fieldwork -- publish <project-dir> --out <dir>` writes a template repository's file tree into an empty directory. It copies an allow-list, so anything else in the source Project, `solutions/` above all, never reaches it.

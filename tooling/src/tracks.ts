@@ -16,7 +16,7 @@ export interface StepRun {
  * Every Track's `test` reports each passed Step on a line starting `✔ Step`,
  * stopping at the Current Step, so that line is the contract read here.
  */
-type TrackRunner = (projectDir: string) => StepRun;
+export type TrackRunner = (projectDir: string) => StepRun;
 
 const tracks: Record<string, TrackRunner> = {
   "typescript-on-node": (projectDir) =>
