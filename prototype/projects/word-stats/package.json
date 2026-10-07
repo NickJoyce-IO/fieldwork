@@ -1,0 +1,13 @@
+{
+  "name": "word-stats",
+  "private": true,
+  "type": "module",
+  "description": "Prototype example Project for #6 (repo-per-Project)",
+  "scripts": {
+    "test": "node ../../../tracks/typescript-on-node/runner/src/cli.ts test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}
