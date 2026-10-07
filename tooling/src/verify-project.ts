@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { lastPublished, majorVersion } from "./published.ts";
+import { compareVersions, isVersion, lastPublished, majorVersion } from "./published.ts";
 import { trackRunner, type TrackRunner } from "./tracks.ts";
 
 interface StepDefinition {
@@ -24,7 +24,8 @@ export interface Verdict {
 /**
  * Checks a Project's Steps against its starter code and Reference Solutions
  * (docs/project-layout.md): the starter passes no Step, and the solution for
- * Step N passes Steps 1..N and not Step N+1.
+ * Step N passes Steps 1..N and not Step N+1. Then checks its published Steps
+ * have not got stricter since its last published version.
  */
 export function verifyProject(projectDir: string): Verdict {
   const metadata = JSON.parse(readFileSync(join(projectDir, "fieldwork.json"), "utf8")) as ProjectMetadata;
@@ -85,8 +86,17 @@ function publishedStepProblems(
   runSteps: TrackRunner,
   label: (index: number) => string,
 ): string[] {
+  if (!isVersion(metadata.version)) {
+    return [`version "${metadata.version}" in fieldwork.json is not major.minor.patch`];
+  }
   const published = lastPublished(projectDir, metadata.name);
-  if (published === undefined || majorVersion(metadata.version) !== majorVersion(published.version)) return [];
+  if (published === undefined) return [];
+  if (compareVersions(metadata.version, published.version) < 0) {
+    return [
+      `version ${metadata.version} is lower than its last published version, ${published.tag}, but a Project's version must only go up`,
+    ];
+  }
+  if (majorVersion(metadata.version) !== majorVersion(published.version)) return [];
 
   const problems: string[] = [];
   const workDir = makeWorkingCopy(projectDir);
@@ -98,15 +108,22 @@ function publishedStepProblems(
       // must stay where it was.
       if (metadata.steps[index]?.id !== step.id) {
         problems.push(
-          `Step ${index + 1} "${step.title}" from ${published.tag} is no longer Step ${index + 1}, so Learners who completed it would lose it after a ${metadata.version} update. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
+          `Step ${index + 1} "${step.title}" from ${published.tag} is no longer Step ${index + 1}, so Learners who completed it would lose it after a Project Update to ${metadata.version}. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
         );
         break;
       }
-      applySolution(workDir, join(solutionsDir, step.id));
+      const solutionDir = join(solutionsDir, step.id);
+      if (!existsSync(solutionDir)) {
+        problems.push(
+          `${label(index)}: ${published.tag} has no Reference Solution for it at solutions/${step.id}/, so there is nothing to check it has not got stricter against`,
+        );
+        continue;
+      }
+      applySolution(workDir, solutionDir);
       const run = runSteps(workDir);
       if (run.passedSteps <= index) {
         problems.push(
-          `${label(index)}: its tests now fail its Reference Solution from ${published.tag}, so Learners who completed it would fail it after a ${metadata.version} update. Within a major version published Steps must not get stricter: bump the major version, or loosen the tests\n${indent(run.output)}`,
+          `${label(index)}: its tests now fail its Reference Solution from ${published.tag}, so Learners who completed it would fail it after a Project Update to ${metadata.version}. Within a major version published Steps must not get stricter: bump the major version, or loosen the tests\n${indent(run.output)}`,
         );
       }
     }

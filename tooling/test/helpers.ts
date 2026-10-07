@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -39,18 +39,21 @@ export function brokenHelloSteps(overrides: Record<string, string>): string {
  * Copies hello-steps into a folder of its own Git repository in tooling/.tmp,
  * as a Project sits in the monorepo, and tags it as published at its current
  * version. Then overwrites some files as a later edit would. Returns the
- * Project directory.
+ * Project directory. Paths in `publishedWithout` are left out of the
+ * published version and only appear afterwards.
  */
-export function publishedHelloSteps(edits: Record<string, string>): string {
+export function publishedHelloSteps(edits: Record<string, string>, publishedWithout: string[] = []): string {
   const tmpRoot = join(toolingDir, ".tmp");
   mkdirSync(tmpRoot, { recursive: true });
   const repo = mkdtempSync(join(tmpRoot, "monorepo-"));
   const dir = join(repo, "projects", "hello-steps");
   cpSync(helloSteps, dir, { recursive: true });
+  for (const path of publishedWithout) rmSync(join(dir, path), { recursive: true });
   git(repo, ["init", "--quiet"]);
   git(repo, ["add", "."]);
   git(repo, ["commit", "--quiet", "-m", "Publish hello-steps 0.1.0"]);
   git(repo, ["tag", "hello-steps@0.1.0"]);
+  for (const path of publishedWithout) cpSync(join(helloSteps, path), join(dir, path), { recursive: true });
   overwrite(dir, edits);
   return dir;
 }

@@ -209,7 +209,7 @@ export function shout(name: string): string {
   assert.equal(exitCode, 0);
 });
 
-test("fails when a minor version removes or reorders a published Step", () => {
+test("fails when a minor version removes a published Step", () => {
   const project = publishedHelloSteps({
     "fieldwork.json": JSON.stringify({
       ...JSON.parse(helloStepsAt("0.2.0")),
@@ -222,6 +222,56 @@ test("fails when a minor version removes or reorders a published Step", () => {
   assert.match(
     output,
     /hello-steps, Step 2 "Say goodbye" from hello-steps@0\.1\.0 is no longer Step 2.*bump the major version/,
+  );
+  assert.equal(exitCode, 1);
+});
+
+test("fails when a minor version reorders published Steps", () => {
+  const project = publishedHelloSteps({
+    "fieldwork.json": JSON.stringify({
+      ...JSON.parse(helloStepsAt("0.2.0")),
+      steps: [
+        { id: "02-farewell", title: "Say goodbye" },
+        { id: "01-greet", title: "Greet someone" },
+      ],
+    }),
+  });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(
+    output,
+    /hello-steps, Step 1 "Greet someone" from hello-steps@0\.1\.0 is no longer Step 1.*bump the major version/,
+  );
+  assert.equal(exitCode, 1);
+});
+
+test("fails when the version is lower than the last published one", () => {
+  const project = publishedHelloSteps({ "fieldwork.json": helloStepsAt("0.0.9") });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /hello-steps, version 0\.0\.9 is lower than its last published version, hello-steps@0\.1\.0/);
+  assert.equal(exitCode, 1);
+});
+
+test("fails when the version is not major.minor.patch", () => {
+  const project = publishedHelloSteps({ "fieldwork.json": helloStepsAt("2") });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /hello-steps, version "2" in fieldwork\.json is not major\.minor\.patch/);
+  assert.equal(exitCode, 1);
+});
+
+test("fails, naming the Step, when its published version has no Reference Solution to check against", () => {
+  const project = publishedHelloSteps({ "fieldwork.json": helloStepsAt("0.2.0") }, ["solutions/02-farewell"]);
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(
+    output,
+    /hello-steps, Step 2 "Say goodbye": hello-steps@0\.1\.0 has no Reference Solution for it at solutions\/02-farewell\//,
   );
   assert.equal(exitCode, 1);
 });

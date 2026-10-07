@@ -43,7 +43,7 @@ Publishing a Project to its template repository (from monorepo CI, #21) tags the
 - Step N must still be Step N, with the same `id`.
 - Step N's Reference Solution **as published** must pass Steps 1..N as they stand now. If it doesn't, the Step got stricter, and a Learner who completed it would fail it after updating.
 
-The failure names the Step and asks for a major version bump. A Project with no tag has never been published, so the guard doesn't apply to it. CI checks out the full history so the tags are there.
+The failure names the Step and asks for a major version bump. `verify` also fails if the version is not `major.minor.patch`, or is lower than the last published one. A Project with no tag has never been published, so the guard doesn't apply to it. CI checks out the full history so the tags are there.
 
 ## What `publish` produces
 
