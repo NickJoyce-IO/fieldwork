@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FakeGitHub } from "./fake-github.ts";
 
 const runnerDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(runnerDir, "src", "cli.ts");
@@ -60,6 +61,21 @@ export function makeProject(project: FixtureProject): string {
     for (const [name, content] of Object.entries(step.files)) write(join("steps", step.id, name), content);
   }
   return dir;
+}
+
+/** A fresh, empty fake GitHub repository (see fake-github.ts). */
+export function fakeGitHub(): FakeGitHub {
+  const tmpRoot = join(runnerDir, ".tmp");
+  mkdirSync(tmpRoot, { recursive: true });
+  return new FakeGitHub(join(mkdtempSync(join(tmpRoot, "github-")), "issues.json"));
+}
+
+/** Environment that makes the CLI use `github` instead of real GitHub. */
+export function fakeGitHubEnv(github: FakeGitHub): NodeJS.ProcessEnv {
+  return {
+    FIELDWORK_GITHUB_ADAPTER: join(runnerDir, "test", "fake-github.ts"),
+    FIELDWORK_FAKE_GITHUB_STATE: github.statePath,
+  };
 }
 
 export interface RunResult {

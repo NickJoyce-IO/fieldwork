@@ -5,7 +5,7 @@ How a Project is laid out in this monorepo, and which parts reach the Learner. T
 ## Where things live in the monorepo
 
 - `tooling/`: maintainer-side commands (`npm run fieldwork -- <command>`), such as `verify` and `publish`. Never shipped to Learners (ADR-0002).
-- `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, later `update` and `setup`). Shipped inside every published Project of the Track.
+- `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, `progress`, later `update` and `setup`). Shipped inside every published Project of the Track. All their GitHub calls go through one adapter (`runner/src/github.ts`), which wraps the `gh` CLI and is replaced by a fake in tests.
 - `tracks/<track>/template/`: files every published Project of the Track gets as they are, such as the PR workflow and the devcontainer.
 - `tracks/<track>/projects/<project>/`: real Projects.
 - `tracks/<track>/fixtures/<project>/`: small Projects used to test the tooling, laid out exactly like real ones.
@@ -47,3 +47,9 @@ README.md             generated from fieldwork.json
 ```
 
 The PR workflow runs `npm test` and copies its output into the check summary. Exit code 1 means the Current Step is unfinished, which a pull request may leave it, so the check passes. Any other non-zero exit means the Steps could not run, and the check fails.
+
+## The progress view
+
+On every push to `main`, the `progress.yml` workflow runs `node .fieldwork/cli.ts progress`. It checks the Steps in order as `test` does. Every Step that passes before the Current Step is a Completed Step, so one pull request that finishes several Steps records them all. The result goes into a pinned issue titled "Progress", which is created on the first run and found again by a hidden marker in its body. The workflow's token can read the repository's contents but not write them, so it never commits to the protected `main`.
+
+The adapter's contract tests run against the fake on every test run. To run them against real GitHub as well, set `FIELDWORK_GITHUB_CONTRACT_REPO=<owner>/<repo>` and run `npm test` in the runner package with a `gh` login that can write issues there. The tests create, pin, unpin and close their own issues.

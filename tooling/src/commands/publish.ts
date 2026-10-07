@@ -89,7 +89,7 @@ ${steps.map(({ id, title }, index) => `${index + 1}. [Step ${index + 1}: ${title
 
 ## Workflow
 
-For each Step (or a few at once), work on a branch, open a pull request against \`main\` in this repository, and merge it once its check passes. The check's summary shows which Steps the pull request passes.
+For each Step (or a few at once), work on a branch, open a pull request against \`main\` in this repository, and merge it once its check passes. The check's summary shows which Steps the pull request passes. After each merge, the pinned Progress issue is updated with your Completed Steps.
 `;
 }
 

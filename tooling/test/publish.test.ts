@@ -98,6 +98,19 @@ test("a published Project has a PR workflow that runs every Step and reports the
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
 });
 
+test("a published Project has a workflow that records progress after each merge to main without committing to it", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloSteps, outDir).exitCode, 0);
+
+  const workflow = readFileSync(join(outDir, ".github", "workflows", "progress.yml"), "utf8");
+  assert.match(workflow, /push:\n\s+branches: \[main\]/);
+  assert.match(workflow, /node \.fieldwork\/cli\.ts progress/);
+  // A read-only token cannot push to main; it only needs to write the Progress issue.
+  assert.match(workflow, /contents: read/);
+  assert.match(workflow, /issues: write/);
+  assert.doesNotMatch(workflow, /contents: write/);
+});
+
 test("publish refuses to write into a directory that already has files in it", () => {
   const outDir = freshOutDir();
   writeFileSync(join(outDir, "keep.txt"), "not mine\n");
