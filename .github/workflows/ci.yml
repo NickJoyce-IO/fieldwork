@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # verify compares each Project with its last published version, which
+          # it reads from the Project's <name>@<version> tags.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -18,6 +22,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       # Merge gate: every Project's starter code and Reference Solutions must
-      # fit its Steps (docs/project-layout.md).
+      # fit its Steps, and published Steps must not get stricter within a major
+      # version (docs/project-layout.md).
       - name: Verify every Project
         run: npm run fieldwork -- verify

@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { trackRunner } from "./tracks.ts";
+import { compareVersions, isVersion, lastPublished, majorVersion } from "./published.ts";
+import { trackRunner, type TrackRunner } from "./tracks.ts";
 
 interface StepDefinition {
   id: string;
@@ -9,6 +10,7 @@ interface StepDefinition {
 
 interface ProjectMetadata {
   name: string;
+  version: string;
   track: string;
   steps: StepDefinition[];
 }
@@ -22,7 +24,8 @@ export interface Verdict {
 /**
  * Checks a Project's Steps against its starter code and Reference Solutions
  * (docs/project-layout.md): the starter passes no Step, and the solution for
- * Step N passes Steps 1..N and not Step N+1.
+ * Step N passes Steps 1..N and not Step N+1. Then checks its published Steps
+ * have not got stricter since its last published version.
  */
 export function verifyProject(projectDir: string): Verdict {
   const metadata = JSON.parse(readFileSync(join(projectDir, "fieldwork.json"), "utf8")) as ProjectMetadata;
@@ -67,7 +70,67 @@ export function verifyProject(projectDir: string): Verdict {
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }
+  problems.push(...publishedStepProblems(projectDir, metadata, runSteps, label));
   return { project: metadata.name, problems };
+}
+
+/**
+ * The Project Update promise: within a major version, published Steps never get
+ * stricter. So each published Step's published Reference Solution must still
+ * pass Steps 1..N as they stand now, or a Learner who completed them would see
+ * them fail after updating.
+ */
+function publishedStepProblems(
+  projectDir: string,
+  metadata: ProjectMetadata,
+  runSteps: TrackRunner,
+  label: (index: number) => string,
+): string[] {
+  if (!isVersion(metadata.version)) {
+    return [`version "${metadata.version}" in fieldwork.json is not major.minor.patch`];
+  }
+  const published = lastPublished(projectDir, metadata.name);
+  if (published === undefined) return [];
+  if (compareVersions(metadata.version, published.version) < 0) {
+    return [
+      `version ${metadata.version} is lower than its last published version, ${published.tag}, but a Project's version must only go up`,
+    ];
+  }
+  if (majorVersion(metadata.version) !== majorVersion(published.version)) return [];
+
+  const problems: string[] = [];
+  const workDir = makeWorkingCopy(projectDir);
+  try {
+    const solutionsDir = join(workDir, ".published-solutions");
+    published.extractSolutions(solutionsDir);
+    for (const [index, step] of published.steps.entries()) {
+      // A Learner's Completed Steps are counted in order, so a published Step
+      // must stay where it was.
+      if (metadata.steps[index]?.id !== step.id) {
+        problems.push(
+          `Step ${index + 1} "${step.title}" from ${published.tag} is no longer Step ${index + 1}, so Learners who completed it would lose it after a Project Update to ${metadata.version}. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
+        );
+        break;
+      }
+      const solutionDir = join(solutionsDir, step.id);
+      if (!existsSync(solutionDir)) {
+        problems.push(
+          `${label(index)}: ${published.tag} has no Reference Solution for it at solutions/${step.id}/, so there is nothing to check it has not got stricter against`,
+        );
+        continue;
+      }
+      applySolution(workDir, solutionDir);
+      const run = runSteps(workDir);
+      if (run.passedSteps <= index) {
+        problems.push(
+          `${label(index)}: its tests now fail its Reference Solution from ${published.tag}, so Learners who completed it would fail it after a Project Update to ${metadata.version}. Within a major version published Steps must not get stricter: bump the major version, or loosen the tests\n${indent(run.output)}`,
+        );
+      }
+    }
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+  return problems;
 }
 
 /**
