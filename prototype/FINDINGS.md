@@ -16,6 +16,8 @@ Whether publishing one public template repository per Project works end to end, 
 
 **Go: keep repo-per-Project.** Every acceptance criterion of #6 held with the tooling as built, and nothing turned up that repo-per-Track would avoid. No ADR is needed since the spec's plan stands.
 
+Repo-per-Track was reconsidered and rejected. It would mean fewer repositories and only one Step 0 per Track. But Projects would stop standing alone, versions and Project Updates would be shared across Projects, the runner, workflows and progress view would all need to know about Projects, and per-repo Git practices (tags, releases, workflow changes) would clash between Projects. The real cost of repo-per-Project is repository clutter, and an org addresses that for the template repositories.
+
 ## Findings
 
 - **Actions runs with no setup.** A repository created from a template had Actions enabled, and the first PR was graded without approval or configuration.
