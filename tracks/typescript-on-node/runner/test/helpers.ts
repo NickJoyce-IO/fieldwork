@@ -10,6 +10,8 @@ const cliPath = join(runnerDir, "src", "cli.ts");
 export interface FixtureStep {
   id: string;
   title: string;
+  /** A built-in check instead of tests, e.g. "main-ruleset" for Step 0. */
+  check?: string;
   /** Files inside the Step's folder, keyed by file name. */
   files: Record<string, string>;
 }
@@ -48,7 +50,7 @@ export function makeProject(project: FixtureProject): string {
         name: "fixture",
         version: "1.0.0",
         track: "typescript-on-node",
-        steps: project.steps.map(({ id, title }) => ({ id, title })),
+        steps: project.steps.map(({ id, title, check }) => ({ id, title, ...(check === undefined ? {} : { check }) })),
       },
       null,
       2,

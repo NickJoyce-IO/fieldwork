@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const toolingDir = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -14,10 +14,10 @@ export interface RunResult {
 }
 
 /** Runs a maintainer command the way `npm run fieldwork -- <args>` does. */
-export function runFieldwork(args: string[]): RunResult {
+export function runFieldwork(args: string[], env: NodeJS.ProcessEnv = {}): RunResult {
   const result = spawnSync(process.execPath, [cliPath, ...args], {
     encoding: "utf8",
-    env: { ...process.env, NO_COLOR: "1" },
+    env: { ...process.env, ...env, NO_COLOR: "1" },
   });
   return { exitCode: result.status, output: result.stdout + result.stderr };
 }
@@ -27,10 +27,22 @@ export function runFieldwork(args: string[]): RunResult {
  * path relative to the Project root), to make a deliberately broken Project.
  */
 export function brokenHelloSteps(overrides: Record<string, string>): string {
+  return brokenFixture(helloSteps, overrides);
+}
+
+/** The first Project of a Track: Step 0 (protect main) before its code Steps. */
+export const helloStepZero = join(toolingDir, "..", "tracks", "typescript-on-node", "fixtures", "hello-step-zero");
+
+/** hello-step-zero, as brokenHelloSteps does for hello-steps. */
+export function brokenHelloStepZero(overrides: Record<string, string>): string {
+  return brokenFixture(helloStepZero, overrides);
+}
+
+function brokenFixture(fixture: string, overrides: Record<string, string>): string {
   const tmpRoot = join(toolingDir, ".tmp");
   mkdirSync(tmpRoot, { recursive: true });
-  const dir = mkdtempSync(join(tmpRoot, "hello-steps-"));
-  cpSync(helloSteps, dir, { recursive: true });
+  const dir = mkdtempSync(join(tmpRoot, `${basename(fixture)}-`));
+  cpSync(fixture, dir, { recursive: true });
   overwrite(dir, overrides);
   return dir;
 }

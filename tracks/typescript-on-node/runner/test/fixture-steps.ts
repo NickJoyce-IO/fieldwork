@@ -72,3 +72,10 @@ export type Cases = [Expect<Equal<Pair<number>, [number, number]>>];
 `,
   },
 };
+
+export const protectMainStep = {
+  id: "00-protect-main",
+  title: "Protect main",
+  check: "main-ruleset",
+  files: { "README.md": "# Protect main\n" },
+};

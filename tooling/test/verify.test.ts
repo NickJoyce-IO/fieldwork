@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { brokenHelloSteps, helloSteps, publishedHelloSteps, runFieldwork } from "./helpers.ts";
+import { brokenHelloSteps, helloSteps, brokenHelloStepZero, helloStepZero, publishedHelloSteps, runFieldwork } from "./helpers.ts";
 
 test("the hello-steps fixture Project passes verify", () => {
   const { exitCode, output } = runFieldwork(["verify", helloSteps]);
@@ -273,5 +273,31 @@ test("fails, naming the Step, when its published version has no Reference Soluti
     output,
     /hello-steps, Step 2 "Say goodbye": hello-steps@0\.1\.0 has no Reference Solution for it at solutions\/02-farewell\//,
   );
+  assert.equal(exitCode, 1);
+});
+
+test("passes a Project with Step 0, which checks the Learner's repository rather than code, without reaching GitHub", () => {
+  // No login and no way to reach GitHub: verify must not try.
+  const { exitCode, output } = runFieldwork(["verify", helloStepZero], { PATH: "", GH_TOKEN: "" });
+
+  assert.match(output, /✔ hello-step-zero/);
+  assert.equal(exitCode, 0);
+});
+
+test("names code Steps by their number as a Learner sees it, counting Step 0", () => {
+  const project = brokenHelloStepZero({ "src/greet.ts": greetSolved });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /hello-step-zero, Step 2 "Greet someone": the starter code passes it/);
+  assert.equal(exitCode, 1);
+});
+
+test("with Step 0, says which Steps a Reference Solution must pass by the numbers a Learner sees", () => {
+  const project = brokenHelloStepZero({ "solutions/01-greet/src/greet.ts": greetSolved.replace("Hello", "Hi") });
+
+  const { exitCode, output } = runFieldwork(["verify", project]);
+
+  assert.match(output, /hello-step-zero, Step 2 "Greet someone": its Reference Solution must pass Steps 1\.\.2, but fails Step 2 "Greet someone"/);
   assert.equal(exitCode, 1);
 });

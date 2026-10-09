@@ -2,6 +2,7 @@
 // runner ships inside every published Project; maintainer-only commands
 // (verify, publish) live in the monorepo's tooling package instead.
 import { progressCommand } from "./commands/progress.ts";
+import { setupCommand } from "./commands/setup.ts";
 import { testCommand } from "./commands/test.ts";
 
 interface Command {
@@ -18,6 +19,10 @@ const commands: Record<string, Command> = {
   progress: {
     summary: "Record Completed Steps in the repository's pinned Progress issue (run by GitHub Actions on main)",
     run: progressCommand,
+  },
+  setup: {
+    summary: "Protect main with a ruleset requiring a pull request and the Fieldwork Steps check",
+    run: setupCommand,
   },
 };
 
