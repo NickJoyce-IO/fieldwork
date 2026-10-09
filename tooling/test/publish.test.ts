@@ -9,6 +9,7 @@ import { brokenHelloSteps, helloStepZero } from "./helpers.ts";
 const toolingDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(toolingDir, "src", "cli.ts");
 const helloSteps = join(toolingDir, "..", "tracks", "typescript-on-node", "fixtures", "hello-steps");
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
 /**
  * A fresh, empty output directory inside the tooling package, so a published
@@ -39,7 +40,7 @@ test("npm test in a published Project works and reports Step 1 as current", () =
   const outDir = freshOutDir();
   assert.equal(publish(helloSteps, outDir).exitCode, 0);
 
-  const { exitCode, output } = run(process.platform === "win32" ? "npm.cmd" : "npm", ["test", "--silent"], outDir);
+  const { exitCode, output } = run(npm, ["test", "--silent"], outDir);
 
   assert.match(output, /✘ Step 1: Greet someone \(0\/1 tests passing\)/);
   assert.match(output, /🔒 Step 2: Say goodbye/);
@@ -88,8 +89,6 @@ test("a published Project pins Node and npm, and ships a README and a devcontain
   assert.match(devcontainer.image, /node:.*24/);
 });
 
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-
 test("a published Project ships a lockfile with the dependency versions the monorepo is graded with", () => {
   const outDir = freshOutDir();
   assert.equal(publish(helloSteps, outDir).exitCode, 0);
@@ -122,7 +121,7 @@ test("npm install in a published Project leaves its lockfile as published", () =
 
 test("publish of a Project needing a dependency the monorepo does not have reports it and exits 2", () => {
   const packageJson = readJson(join(helloSteps, "package.json"));
-  packageJson.devDependencies["@fieldwork/not-in-the-monorepo"] = "^1.0.0";
+  packageJson.devDependencies["not-in-the-monorepo"] = "^1.0.0";
   const projectDir = brokenHelloSteps({ "package.json": JSON.stringify(packageJson) });
 
   const { exitCode, output } = publish(projectDir, freshOutDir());

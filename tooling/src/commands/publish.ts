@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync,existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -124,15 +124,15 @@ For each Step (or a few at once), work on a branch, open a pull request against 
  */
 function writeLockfile(outDir: string): void {
   cpSync(join(monorepoDir, "package-lock.json"), join(outDir, "package-lock.json"));
-  const npm = spawnSync(
+  const result = spawnSync(
     process.platform === "win32" ? "npm.cmd" : "npm",
     ["install", "--package-lock-only", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"],
     { cwd: outDir, encoding: "utf8", shell: process.platform === "win32" },
   );
-  if (npm.error) throw npm.error;
-  if (npm.status !== 0) {
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
     throw new Error(
-      `Could not write package-lock.json. A Project's dependencies must be in the monorepo's package-lock.json, at versions that fit:\n${npm.stdout}${npm.stderr}`,
+      `Could not write package-lock.json. A Project's dependencies must be in the monorepo's package-lock.json, at versions that fit:\n${result.stdout}${result.stderr}`,
     );
   }
 }
