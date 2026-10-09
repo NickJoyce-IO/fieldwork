@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { cpSync,existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -57,6 +58,7 @@ export async function publishCommand(args: string[]): Promise<number> {
   // The source Project's description is written for maintainers, not Learners.
   delete packageJson.description;
   writeJson(join(outDir, "package.json"), packageJson);
+  writeLockfile(outDir);
   cpSync(join(monorepoDir, ".nvmrc"), join(outDir, ".nvmrc"));
   writeFileSync(join(outDir, "README.md"), projectReadme(metadata));
 
@@ -111,6 +113,28 @@ ${steps.map(({ id, title }, index) => `${index + 1}. [Step ${index + 1}: ${title
 
 For each Step (or a few at once), work on a branch, open a pull request against \`main\` in this repository, and merge it once its check passes. The check's summary shows which Steps the pull request passes. After each merge, the pinned Progress issue is updated with your Completed Steps.
 `;
+}
+
+/**
+ * Writes the published Project's package-lock.json, so a Learner's first
+ * `npm install` doesn't add one to their first PR and CI grades with the
+ * versions they tested with. npm trims a copy of the monorepo's lockfile down
+ * to the Project's dependencies, keeping the versions `verify` ran against.
+ * It works offline, so a dependency the monorepo lacks fails here.
+ */
+function writeLockfile(outDir: string): void {
+  cpSync(join(monorepoDir, "package-lock.json"), join(outDir, "package-lock.json"));
+  const npm = spawnSync(
+    process.platform === "win32" ? "npm.cmd" : "npm",
+    ["install", "--package-lock-only", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"],
+    { cwd: outDir, encoding: "utf8", shell: process.platform === "win32" },
+  );
+  if (npm.error) throw npm.error;
+  if (npm.status !== 0) {
+    throw new Error(
+      `Could not write package-lock.json. A Project's dependencies must be in the monorepo's package-lock.json, at versions that fit:\n${npm.stdout}${npm.stderr}`,
+    );
+  }
 }
 
 function readJson(path: string): Record<string, unknown> {

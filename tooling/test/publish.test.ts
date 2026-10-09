@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFil
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { helloStepZero } from "./helpers.ts";
+import { brokenHelloSteps, helloStepZero } from "./helpers.ts";
 
 const toolingDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(toolingDir, "src", "cli.ts");
@@ -88,6 +88,49 @@ test("a published Project pins Node and npm, and ships a README and a devcontain
   assert.match(devcontainer.image, /node:.*24/);
 });
 
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+
+test("a published Project ships a lockfile with the dependency versions the monorepo is graded with", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloSteps, outDir).exitCode, 0);
+
+  const lockfile = readJson(join(outDir, "package-lock.json"));
+  assert.equal(lockfile.name, "hello-steps");
+  assert.deepEqual(lockfile.packages[""].devDependencies, readJson(join(outDir, "package.json")).devDependencies);
+  const monorepoLockfile = readJson(join(toolingDir, "..", "package-lock.json"));
+  const installed = Object.keys(lockfile.packages).filter((path) => path !== "");
+  assert.ok(installed.includes("node_modules/typescript"));
+  for (const path of installed) assert.equal(lockfile.packages[path].version, monorepoLockfile.packages[path].version, path);
+  // The monorepo's own workspaces are not the Learner's dependencies.
+  for (const path of installed) assert.doesNotMatch(path, /@fieldwork/);
+
+  // npm ci refuses a lockfile that does not match package.json.
+  const ci = run(npm, ["ci", "--dry-run", "--offline", "--no-audit", "--no-fund"], outDir);
+  assert.equal(ci.exitCode, 0, ci.output);
+});
+
+test("npm install in a published Project leaves its lockfile as published", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloSteps, outDir).exitCode, 0);
+  const published = readFileSync(join(outDir, "package-lock.json"), "utf8");
+
+  const install = run(npm, ["install", "--offline", "--no-audit", "--no-fund"], outDir);
+
+  assert.equal(install.exitCode, 0, install.output);
+  assert.equal(readFileSync(join(outDir, "package-lock.json"), "utf8"), published);
+});
+
+test("publish of a Project needing a dependency the monorepo does not have reports it and exits 2", () => {
+  const packageJson = readJson(join(helloSteps, "package.json"));
+  packageJson.devDependencies["@fieldwork/not-in-the-monorepo"] = "^1.0.0";
+  const projectDir = brokenHelloSteps({ "package.json": JSON.stringify(packageJson) });
+
+  const { exitCode, output } = publish(projectDir, freshOutDir());
+
+  assert.match(output, /monorepo's package-lock\.json/);
+  assert.equal(exitCode, 2);
+});
+
 test("a published Project has a PR workflow that runs every Step and reports them in the check summary", () => {
   const outDir = freshOutDir();
   assert.equal(publish(helloSteps, outDir).exitCode, 0);
@@ -95,6 +138,9 @@ test("a published Project has a PR workflow that runs every Step and reports the
   const workflow = readFileSync(join(outDir, ".github", "workflows", "fieldwork.yml"), "utf8");
   assert.match(workflow, /pull_request/);
   assert.match(workflow, /node-version-file: \.nvmrc/);
+  // Grade against the published lockfile, never versions resolved afresh.
+  assert.match(workflow, /run: npm ci\n/);
+  assert.doesNotMatch(workflow, /npm install/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
   // Step 0 asks GitHub whether main is protected.
@@ -126,6 +172,8 @@ test("a published Project has a workflow that records progress after each merge 
 
   const workflow = readFileSync(join(outDir, ".github", "workflows", "progress.yml"), "utf8");
   assert.match(workflow, /push:\n\s+branches: \[main\]/);
+  assert.match(workflow, /run: npm ci\n/);
+  assert.doesNotMatch(workflow, /npm install/);
   assert.match(workflow, /node \.fieldwork\/cli\.ts progress/);
   // A read-only token cannot push to main; it only needs to write the Progress issue.
   assert.match(workflow, /contents: read/);
