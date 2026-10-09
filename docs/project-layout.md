@@ -69,6 +69,7 @@ The failure names the Step and asks for a major version bump. `verify` also fail
 ```
 fieldwork.json        copied as is, so the version is the one in the source Project
 package.json          the source's, minus `description`, with `npm test` and `npm run setup` pointed at .fieldwork/ and Node and npm pinned as in the monorepo
+package-lock.json     the monorepo's, trimmed to the Project's dependencies
 tsconfig.json         copied as is
 .nvmrc                the monorepo's
 src/                  the starter code, which becomes Learner Code
@@ -78,7 +79,9 @@ README.md             generated from fieldwork.json
 .github/, .devcontainer/, .gitignore   from tracks/<track>/template/
 ```
 
-The PR workflow runs `npm test` and copies its output into the check summary. Exit code 1 means the Current Step is unfinished, which a pull request may leave it, so the check passes. Any other non-zero exit means the Steps could not run, and the check fails.
+The lockfile pins the dependency versions that `verify` ran the Project against. That way a Learner's first `npm install` doesn't add a lockfile to their first pull request, and CI grades them with the versions they tested with. `publish` makes it offline, from the monorepo's lockfile alone. So any dependency a Project declares must already be in the monorepo's `package-lock.json`, at a version that fits. Otherwise `publish` fails and says so.
+
+Both workflows and the devcontainer install with `npm ci`, which installs exactly what the lockfile says and fails if it no longer matches `package.json`. The PR workflow runs `npm test` and copies its output into the check summary. Exit code 1 means the Current Step is unfinished, which a pull request may leave it, so the check passes. Any other non-zero exit means the Steps could not run, and the check fails.
 
 ## The progress view
 
