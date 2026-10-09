@@ -87,6 +87,8 @@ test("a published Project pins Node and npm, and ships a README and a devcontain
 
   const devcontainer = readJson(join(outDir, ".devcontainer", "devcontainer.json"));
   assert.match(devcontainer.image, /node:.*24/);
+  // Install from the published lockfile, as the workflows do, so it is never rewritten.
+  assert.equal(devcontainer.postCreateCommand, "npm ci");
 });
 
 test("a published Project ships a lockfile with the dependency versions the monorepo is graded with", () => {
