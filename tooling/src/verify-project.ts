@@ -6,6 +6,8 @@ import { trackRunner, type TrackRunner } from "./tracks.ts";
 interface StepDefinition {
   id: string;
   title: string;
+  /** A built-in check, such as Step 0's "main-ruleset", rather than tests against Learner Code. */
+  check?: string;
 }
 
 interface ProjectMetadata {
@@ -25,7 +27,9 @@ export interface Verdict {
  * Checks a Project's Steps against its starter code and Reference Solutions
  * (docs/project-layout.md): the starter passes no Step, and the solution for
  * Step N passes Steps 1..N and not Step N+1. Then checks its published Steps
- * have not got stricter since its last published version.
+ * have not got stricter since its last published version. Steps with a
+ * built-in check, such as Step 0, are about the Learner's repository rather
+ * than their code, so they are left out of every run.
  */
 export function verifyProject(projectDir: string): Verdict {
   const metadata = JSON.parse(readFileSync(join(projectDir, "fieldwork.json"), "utf8")) as ProjectMetadata;
@@ -34,8 +38,10 @@ export function verifyProject(projectDir: string): Verdict {
     return { project: metadata.name, problems: [`unknown Track "${metadata.track}" in fieldwork.json`] };
   }
 
-  const steps = metadata.steps;
-  const label = (index: number) => `Step ${index + 1} "${steps[index]!.title}"`;
+  const steps = codeSteps(metadata.steps);
+  // Steps are numbered as a Learner sees them, Step 0 included.
+  const number = (index: number) => metadata.steps.indexOf(steps[index]!) + 1;
+  const label = (index: number) => `Step ${number(index)} "${steps[index]!.title}"`;
   const problems: string[] = [];
   const workDir = makeWorkingCopy(projectDir);
   try {
@@ -47,7 +53,7 @@ export function verifyProject(projectDir: string): Verdict {
         problems.push(`${label(index)}: the starter code passes it, but starter code must not pass any Step`);
       }
     }
-    writeMetadata(workDir, metadata);
+    writeMetadata(workDir, { ...metadata, steps });
 
     for (const [index, step] of steps.entries()) {
       const solutionDir = join(projectDir, "solutions", step.id);
@@ -59,7 +65,7 @@ export function verifyProject(projectDir: string): Verdict {
       const run = runSteps(workDir);
       if (run.passedSteps <= index) {
         problems.push(
-          `${label(index)}: its Reference Solution must pass Steps 1..${index + 1}, but fails ${label(run.passedSteps)}\n${indent(run.output)}`,
+          `${label(index)}: its Reference Solution must pass Steps 1..${number(index)}, but fails ${label(run.passedSteps)}\n${indent(run.output)}`,
         );
       } else if (run.passedSteps > index + 1) {
         problems.push(
@@ -98,20 +104,23 @@ function publishedStepProblems(
   }
   if (majorVersion(metadata.version) !== majorVersion(published.version)) return [];
 
+  // A Learner's Completed Steps are counted in order, so a published Step
+  // must stay where it was.
+  const moved = published.steps.findIndex((step, index) => metadata.steps[index]?.id !== step.id);
+  if (moved !== -1) {
+    const step = published.steps[moved]!;
+    return [
+      `Step ${moved + 1} "${step.title}" from ${published.tag} is no longer Step ${moved + 1}, so Learners who completed it would lose it after a Project Update to ${metadata.version}. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
+    ];
+  }
+
   const problems: string[] = [];
   const workDir = makeWorkingCopy(projectDir);
   try {
+    writeMetadata(workDir, { ...metadata, steps: codeSteps(metadata.steps) });
     const solutionsDir = join(workDir, ".published-solutions");
     published.extractSolutions(solutionsDir);
-    for (const [index, step] of published.steps.entries()) {
-      // A Learner's Completed Steps are counted in order, so a published Step
-      // must stay where it was.
-      if (metadata.steps[index]?.id !== step.id) {
-        problems.push(
-          `Step ${index + 1} "${step.title}" from ${published.tag} is no longer Step ${index + 1}, so Learners who completed it would lose it after a Project Update to ${metadata.version}. Within a major version published Steps must not be removed or reordered: bump the major version, or put the Step back`,
-        );
-        break;
-      }
+    for (const [index, step] of codeSteps(published.steps).entries()) {
       const solutionDir = join(solutionsDir, step.id);
       if (!existsSync(solutionDir)) {
         problems.push(
@@ -167,4 +176,9 @@ function indent(output: string): string {
     .split(/\r?\n/)
     .map((line) => `    ${line}`)
     .join("\n");
+}
+
+/** The Steps checked against Learner Code: all but those with a built-in check. */
+function codeSteps(steps: StepDefinition[]): StepDefinition[] {
+  return steps.filter(({ check }) => check === undefined);
 }

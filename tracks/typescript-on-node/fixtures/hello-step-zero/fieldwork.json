@@ -1,0 +1,9 @@
+{
+  "name": "hello-step-zero",
+  "version": "0.1.0",
+  "track": "typescript-on-node",
+  "steps": [
+    { "id": "00-protect-main", "title": "Protect main", "check": "main-ruleset" },
+    { "id": "01-greet", "title": "Greet someone" }
+  ]
+}

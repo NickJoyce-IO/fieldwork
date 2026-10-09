@@ -11,7 +11,7 @@ interface ProjectMetadata {
   name: string;
   version: string;
   track: string;
-  steps: { id: string; title: string }[];
+  steps: { id: string; title: string; check?: string }[];
 }
 
 /**
@@ -47,7 +47,11 @@ export async function publishCommand(args: string[]): Promise<number> {
   // Learners get the Node and npm versions the monorepo is built and graded with.
   const monorepoPackage = readJson(join(monorepoDir, "package.json"));
   const packageJson = readJson(join(projectDir, "package.json"));
-  packageJson.scripts = { ...(packageJson.scripts as object), test: `node ${publishedRunnerDir}/cli.ts test` };
+  packageJson.scripts = {
+    ...(packageJson.scripts as object),
+    test: `node ${publishedRunnerDir}/cli.ts test`,
+    setup: `node ${publishedRunnerDir}/cli.ts setup`,
+  };
   packageJson.packageManager = monorepoPackage.packageManager;
   packageJson.engines = monorepoPackage.engines;
   // The source Project's description is written for maintainers, not Learners.
@@ -59,6 +63,22 @@ export async function publishCommand(args: string[]): Promise<number> {
   console.log(`Published ${metadata.name} ${metadata.version} to ${outDir}`);
   return 0;
 }
+
+/**
+ * For a Project without Step 0: the Learner protected main by hand in their
+ * Track's first Project, so `setup` does it for them here.
+ */
+const protectMainSection = `
+## Protect main
+
+Before your first pull request, protect \`main\` as you did in the first Project of this Track: changes reach it only through a pull request, once the Fieldwork check has run. One command does it. It needs the GitHub CLI (https://cli.github.com), logged in with \`gh auth login\`:
+
+\`\`\`sh
+npm run setup
+\`\`\`
+
+It adds a ruleset to this repository that requires a pull request and the "Fieldwork Steps" check before anything reaches \`main\`. Running it again is safe. If it cannot reach GitHub or change the repository's settings, it tells you what to fix.
+`;
 
 function projectReadme({ name, version, steps }: ProjectMetadata): string {
   return `# ${name}
@@ -75,7 +95,7 @@ npm test
 \`\`\`
 
 \`npm test\` runs the Steps in order and stops at the first one that fails: your Current Step. Steps after it are locked until it passes, but you can read their instructions and tests whenever you like.
-
+${steps.some(({ check }) => check === "main-ruleset") ? "" : protectMainSection}
 ## Steps
 
 ${steps.map(({ id, title }, index) => `${index + 1}. [Step ${index + 1}: ${title}](steps/${id}/README.md)`).join("\n")}

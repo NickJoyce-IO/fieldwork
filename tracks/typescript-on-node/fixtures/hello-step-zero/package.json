@@ -1,0 +1,13 @@
+{
+  "name": "hello-step-zero",
+  "private": true,
+  "type": "module",
+  "description": "Fixture Project for the first Project of a Track: Step 0 (protect main) before its code Steps",
+  "scripts": {
+    "test": "node ../../runner/src/cli.ts test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

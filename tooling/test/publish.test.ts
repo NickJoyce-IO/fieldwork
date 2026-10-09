@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFil
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { helloStepZero } from "./helpers.ts";
 
 const toolingDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(toolingDir, "src", "cli.ts");
@@ -96,6 +97,27 @@ test("a published Project has a PR workflow that runs every Step and reports the
   assert.match(workflow, /node-version-file: \.nvmrc/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
+  // Step 0 asks GitHub whether main is protected.
+  assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+});
+
+test("a published Project has an npm script for setup, and its README tells a Learner to run it when there is no Step 0", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloSteps, outDir).exitCode, 0);
+
+  assert.equal(readJson(join(outDir, "package.json")).scripts.setup, "node .fieldwork/cli.ts setup");
+  const readme = readFileSync(join(outDir, "README.md"), "utf8");
+  assert.match(readme, /npm run setup/);
+  assert.match(readme, /gh auth login/);
+});
+
+test("the README of a Project with Step 0 leaves protecting main to Step 0", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloStepZero, outDir).exitCode, 0);
+
+  const readme = readFileSync(join(outDir, "README.md"), "utf8");
+  assert.doesNotMatch(readme, /npm run setup/);
+  assert.match(readme, /\[Step 1: Protect main\]\(steps\/00-protect-main\/README\.md\)/);
 });
 
 test("a published Project has a workflow that records progress after each merge to main without committing to it", () => {
