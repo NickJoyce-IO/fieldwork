@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export interface Issue {
@@ -43,10 +45,28 @@ export interface GitHub {
   listRulesets(): Promise<{ id: number; name: string }[]>;
   createRuleset(ruleset: Ruleset): Promise<void>;
   updateRuleset(id: number, ruleset: Ruleset): Promise<void>;
+
+  /**
+   * Writes the files of the template repository this one was created from
+   * into `dir`, as they stand on its default branch: the latest published
+   * version of the Project.
+   */
+  downloadTemplate(dir: string): Promise<void>;
+  /** Opens a pull request from a branch already pushed to the repository, and returns its URL. */
+  createPullRequest(pullRequest: PullRequest): Promise<string>;
+}
+
+export interface PullRequest {
+  /** The branch with the changes. */
+  head: string;
+  /** The branch they are to be merged into. */
+  base: string;
+  title: string;
+  body: string;
 }
 
 /** Why GitHub could not be reached in a way the Learner can fix. */
-export type GitHubProblem = "gh-missing" | "not-authenticated" | "forbidden" | "needs-public-repo";
+export type GitHubProblem = "gh-missing" | "not-authenticated" | "forbidden" | "needs-public-repo" | "not-from-template";
 
 const guidance: Record<GitHubProblem, string> = {
   "gh-missing": "The GitHub CLI (gh) is not installed. Install it from https://cli.github.com, then run `gh auth login`.",
@@ -56,6 +76,8 @@ const guidance: Record<GitHubProblem, string> = {
     "Your GitHub login cannot read or change this repository's rulesets, which needs admin rights on it. Check that you are in your own Project repository (`gh repo view` shows which one) and logged in as its owner (`gh auth status`). If your login lacks the `repo` scope, run `gh auth refresh -s repo`, then try again.",
   "needs-public-repo":
     "Rulesets on a private repository need a paid GitHub plan. Make this repository public (Settings, then General, then Danger Zone, then Change visibility), then try again.",
+  "not-from-template":
+    "GitHub has no record of a template this repository was created from, so there is nowhere to look for newer versions of the Project. Updates reach repositories made with the Project's \"Use this template\" button, which the Fieldwork README links to.",
 };
 
 export class GitHubError extends Error {
@@ -144,6 +166,21 @@ export class GhCli implements GitHub {
 
   async updateRuleset(id: number, ruleset: Ruleset): Promise<void> {
     await this.gh(["api", "--method", "PUT", `repos/{owner}/{repo}/rulesets/${id}`, "--input", "-"], rulesetPayload(ruleset));
+  }
+
+  async downloadTemplate(dir: string): Promise<void> {
+    const template = (
+      await this.gh(["api", "repos/{owner}/{repo}", "--jq", ".template_repository.full_name // empty"])
+    ).trim();
+    if (template === "") throw new GitHubError("not-from-template");
+    // Only the files are wanted, not the template's history.
+    await this.gh(["repo", "clone", template, dir, "--", "--depth=1", "--quiet"]);
+    rmSync(join(dir, ".git"), { recursive: true, force: true });
+  }
+
+  async createPullRequest({ head, base, title, body }: PullRequest): Promise<string> {
+    // gh prints the new pull request's URL.
+    return (await this.gh(["pr", "create", "--head", head, "--base", base, "--title", title, "--body-file", "-"], body)).trim();
   }
 
   private gh(args: string[], input?: string): Promise<string> {

@@ -52,6 +52,7 @@ export async function publishCommand(args: string[]): Promise<number> {
     ...(packageJson.scripts as object),
     test: `node ${publishedRunnerDir}/cli.ts test`,
     setup: `node ${publishedRunnerDir}/cli.ts setup`,
+    update: `node ${publishedRunnerDir}/cli.ts update`,
   };
   packageJson.packageManager = monorepoPackage.packageManager;
   packageJson.engines = monorepoPackage.engines;
@@ -112,6 +113,18 @@ ${steps.map(({ id, title }, index) => `${index + 1}. [Step ${index + 1}: ${title
 ## Workflow
 
 For each Step (or a few at once), work on a branch, open a pull request against \`main\` in this repository, and merge it once its check passes. The check's summary shows which Steps the pull request passes. After each merge, the pinned Progress issue is updated with your Completed Steps.
+
+## Updates
+
+This Project gets fixes and new Steps over time. To check for a newer version (this needs the GitHub CLI, logged in with \`gh auth login\`):
+
+\`\`\`sh
+npm run update
+\`\`\`
+
+If there is one, it opens a pull request in this repository that brings it in, listing the Steps it adds, changes and removes. Review it and merge it like any other. It never changes your code in \`src/\`, and Steps you have completed still pass afterwards.
+
+A major update may change Steps you have completed, so it is only made when you ask for it: \`npm run update\` tells you what it contains, and \`npm run update -- --major\` takes it.
 `;
 }
 

@@ -20,6 +20,10 @@ export interface FixtureProject {
   steps: FixtureStep[];
   /** Learner Code, keyed by path relative to the Project root. */
   learnerCode: Record<string, string>;
+  /** The Project's version in fieldwork.json; 1.0.0 when not given. */
+  version?: string;
+  /** Any other files, such as README.md or .fieldwork/, keyed by path relative to the Project root. */
+  otherFiles?: Record<string, string>;
 }
 
 export const fixturesDir = join(runnerDir, "..", "fixtures");
@@ -48,7 +52,7 @@ export function makeProject(project: FixtureProject): string {
     JSON.stringify(
       {
         name: "fixture",
-        version: "1.0.0",
+        version: project.version ?? "1.0.0",
         track: "typescript-on-node",
         steps: project.steps.map(({ id, title, check }) => ({ id, title, ...(check === undefined ? {} : { check }) })),
       },
@@ -58,11 +62,42 @@ export function makeProject(project: FixtureProject): string {
   );
   write("tsconfig.json", tsconfig);
   write("package.json", JSON.stringify({ type: "module", private: true }, null, 2));
-  for (const [path, content] of Object.entries(project.learnerCode)) write(path, content);
+  for (const [path, content] of Object.entries({ ...project.learnerCode, ...project.otherFiles })) write(path, content);
   for (const step of project.steps) {
     for (const [name, content] of Object.entries(step.files)) write(join("steps", step.id, name), content);
   }
   return dir;
+}
+
+/** Environment for Git commits, as a Learner's Git config would give it, so they work on any machine. */
+export const gitIdentityEnv: NodeJS.ProcessEnv = {
+  GIT_AUTHOR_NAME: "Learner",
+  GIT_AUTHOR_EMAIL: "learner@example.com",
+  GIT_COMMITTER_NAME: "Learner",
+  GIT_COMMITTER_EMAIL: "learner@example.com",
+};
+
+/** Git as a test runs it. */
+export function git(cwd: string, args: string[]): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, ...gitIdentityEnv } });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed:\n${result.stderr}`);
+  return result.stdout;
+}
+
+/**
+ * A Learner's Project repository: the Project committed to `main` and pushed
+ * to `origin`, a bare repository on disk standing in for the one on GitHub.
+ */
+export function makeLearnerRepo(project: FixtureProject): { dir: string; origin: string } {
+  const dir = makeProject(project);
+  const origin = mkdtempSync(join(runnerDir, ".tmp", "origin-"));
+  git(origin, ["init", "--quiet", "--bare", "--initial-branch=main"]);
+  git(dir, ["init", "--quiet", "--initial-branch=main"]);
+  git(dir, ["add", "--all"]);
+  git(dir, ["commit", "--quiet", "--message", "Create from template"]);
+  git(dir, ["remote", "add", "origin", origin]);
+  git(dir, ["push", "--quiet", "origin", "main"]);
+  return { dir, origin };
 }
 
 /** A fresh, empty fake GitHub repository (see fake-github.ts). */

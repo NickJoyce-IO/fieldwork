@@ -5,7 +5,7 @@ How a Project is laid out in this monorepo, and which parts reach the Learner. T
 ## Where things live in the monorepo
 
 - `tooling/`: maintainer-side commands (`npm run fieldwork -- <command>`), such as `verify` and `publish`. Never shipped to Learners (ADR-0002).
-- `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, `progress`, `setup`, later `update`). Shipped inside every published Project of the Track. All their GitHub calls go through one adapter (`runner/src/github.ts`), which wraps the `gh` CLI and is replaced by a fake in tests.
+- `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, `progress`, `setup`, `update`). Shipped inside every published Project of the Track. All their GitHub calls go through one adapter (`runner/src/github.ts`), which wraps the `gh` CLI and is replaced by a fake in tests.
 - `tracks/<track>/template/`: files every published Project of the Track gets as they are, such as the PR workflow and the devcontainer.
 - `tracks/<track>/projects/<project>/`: real Projects.
 - `tracks/<track>/fixtures/<project>/`: small Projects used to test the tooling, laid out exactly like real ones.
@@ -82,6 +82,18 @@ README.md             generated from fieldwork.json
 The lockfile pins the dependency versions that `verify` ran the Project against. That way a Learner's first `npm install` doesn't add a lockfile to their first pull request, and CI grades them with the versions they tested with. `publish` makes it offline, from the monorepo's lockfile alone. So any dependency a Project declares must already be in the monorepo's `package-lock.json`, at a version that fits. Otherwise `publish` fails and says so.
 
 Both workflows and the devcontainer install with `npm ci`, which installs exactly what the lockfile says and fails if it no longer matches `package.json`. The PR workflow runs `npm test` and copies its output into the check summary. Exit code 1 means the Current Step is unfinished, which a pull request may leave it, so the check passes. Any other non-zero exit means the Steps could not run, and the check fails.
+
+## Project Updates
+
+A Learner runs `npm run update` in their Project repository to bring in a newer version of the Project:
+
+- **Where the newer version comes from:** GitHub records the template a repository was created from, so the adapter downloads that template repository's default branch. That is always the latest published version. Nothing in `fieldwork.json` names the template.
+- **What it compares:** the version in `fieldwork.json` on `main` in the Learner's repository on GitHub, against the template's. If the template's version isn't higher, `update` says the Project is up to date and exits 0.
+- **What it changes:** everything published except `src/`. `steps/` and `.fieldwork/` are replaced whole, so files the newer version dropped go too. Other files, such as `fieldwork.json`, `package.json`, the README and the workflows, are overwritten one by one, so files the Learner added beside them stay. Learner Code in `src/` is never touched, not even to add new starter files. A Step added in a later version must ask the Learner to create any new file in `src/` it needs.
+- **How it arrives:** on a branch `fieldwork/update-<version>`, started from `main` on GitHub and built in a temporary Git worktree, so the Learner's checkout and unsaved work are left alone. The branch is pushed, and a pull request opened through the adapter lists the Steps added, changed and removed. While that branch exists, `update` points to it rather than making it again.
+- **Major versions:** without `--major`, `update` only prints what the major update contains and how to take it. Steps the Learner completed may fail again after one.
+
+Only the latest version can be offered. A Learner on 1.2.0 when 2.0.0 is published cannot get 1.3.0 instead.
 
 ## The progress view
 

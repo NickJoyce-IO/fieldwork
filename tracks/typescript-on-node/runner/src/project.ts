@@ -30,6 +30,12 @@ export function loadProject(dir: string): Project {
 /** The folder, relative to the Project root, holding every Step's Project Content. */
 export const stepsFolder = "steps";
 
+/** The folder, relative to the Project root, holding Learner Code. */
+export const learnerCodeFolder = "src";
+
+/** Where this runner lives in a published Project, relative to its root. */
+export const runnerFolder = ".fieldwork";
+
 /** Where a Step's Project Content lives, relative to the Project root, with forward slashes. */
 export function stepPath(step: StepDefinition): string {
   return `${stepsFolder}/${step.id}`;

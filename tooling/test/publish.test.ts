@@ -158,6 +158,16 @@ test("a published Project has an npm script for setup, and its README tells a Le
   assert.match(readme, /gh auth login/);
 });
 
+test("a published Project has an npm script for update, and its README explains Project Updates", () => {
+  const outDir = freshOutDir();
+  assert.equal(publish(helloSteps, outDir).exitCode, 0);
+
+  assert.equal(readJson(join(outDir, "package.json")).scripts.update, "node .fieldwork/cli.ts update");
+  const readme = readFileSync(join(outDir, "README.md"), "utf8");
+  assert.match(readme, /npm run update\n/);
+  assert.match(readme, /npm run update -- --major/);
+});
+
 test("the README of a Project with Step 0 leaves protecting main to Step 0", () => {
   const outDir = freshOutDir();
   assert.equal(publish(helloStepZero, outDir).exitCode, 0);
