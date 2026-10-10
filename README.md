@@ -42,6 +42,6 @@ No Projects yet.
 
 ## Contributing
 
-Projects are written in this repository and published to their template repositories from it. `docs/project-layout.md` describes how a Project is laid out, and `CONTEXT.md` the vocabulary used throughout.
+Projects are written in this repository and published to their template repositories from it. See `CONTRIBUTING.md` to get started, and `docs/authoring-guide.md` to add or change a Project.
 
 The Track and Project listings above are generated from each Track's `track.json` and each Project's `fieldwork.json`. After changing either, run `npm run fieldwork -- readme` and commit the result. CI fails if the README has drifted from them.

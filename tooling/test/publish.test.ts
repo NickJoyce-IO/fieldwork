@@ -69,6 +69,16 @@ test("a published Project holds starter code as Learner Code, Project Content an
   for (const file of readdirSync(outDir, { recursive: true, encoding: "utf8" })) assert.doesNotMatch(file, /solutions/);
 });
 
+test("a Step's attribution notice is published with it, so borrowed material keeps its licence notice", () => {
+  const notice = "# Notice\n\nAdapted from an MIT-licensed problem spec. Copyright (c) Someone.\n";
+  const project = brokenHelloSteps({ "steps/01-greet/NOTICE.md": notice });
+  const outDir = freshOutDir();
+
+  assert.equal(publish(project, outDir).exitCode, 0);
+
+  assert.equal(readFileSync(join(outDir, "steps", "01-greet", "NOTICE.md"), "utf8"), notice);
+});
+
 test("a published Project pins Node and npm, and ships a README and a devcontainer", () => {
   const outDir = freshOutDir();
   assert.equal(publish(helloSteps, outDir).exitCode, 0);
