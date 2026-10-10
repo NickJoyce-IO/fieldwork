@@ -12,6 +12,8 @@ interface TrackMetadata {
   summary: string;
   /** What a Learner installs before starting any of the Track's Projects. */
   prerequisites: string[];
+  /** Starts the name of each of the Track's template repositories, e.g. "ts" (ADR-0003). */
+  repositoryPrefix: string;
 }
 
 /** The fields of a Project's fieldwork.json that its listing shows. */
@@ -80,18 +82,18 @@ function trackSection(root: string, trackDir: string): string {
     `## ${track.title}`,
     track.summary,
     `Before you start, install:\n\n${bullets(track.prerequisites)}`,
-    ...(projects.length === 0 ? ["No Projects yet."] : projects.map(projectSection)),
+    ...(projects.length === 0 ? ["No Projects yet."] : projects.map((project) => projectSection(track, project))),
   ].join("\n\n");
 }
 
-function projectSection({ name, summary, assumes, concepts, gitPractices }: ProjectListing): string {
+function projectSection(track: TrackMetadata, { name, summary, assumes, concepts, gitPractices }: ProjectListing): string {
   return [
     `### ${name}`,
     summary,
     `**Assumes you know:**\n\n${bullets(assumes)}`,
     `**Language concepts:**\n\n${bullets(concepts)}`,
     `**Git practices:**\n\n${bullets(gitPractices)}`,
-    `[Use this template](${useThisTemplateUrl(name)}) to create your own repository for this Project, then follow its README.`,
+    `[Use this template](${useThisTemplateUrl(track.repositoryPrefix, name)}) to create your own repository for this Project, then follow its README.`,
   ].join("\n\n");
 }
 
@@ -106,6 +108,7 @@ function readTrack(root: string, path: string): TrackMetadata {
     title: requireString(json, "title", where),
     summary: requireString(json, "summary", where),
     prerequisites: requireStrings(json, "prerequisites", where),
+    repositoryPrefix: requireString(json, "repositoryPrefix", where),
   };
 }
 

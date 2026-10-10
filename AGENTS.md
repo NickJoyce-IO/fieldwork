@@ -6,7 +6,7 @@ Free, open-source, test-driven learning Projects for Kotlin and TypeScript-on-No
 
 ### Issue tracker
 
-Issues and specs live in GitHub Issues on NickJoyce-IO/fieldwork, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and specs live in GitHub Issues on fieldwork-learn/fieldwork, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

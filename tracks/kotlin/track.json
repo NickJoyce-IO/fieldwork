@@ -5,5 +5,6 @@
     "JDK 21. Each Project ships the Gradle wrapper, so there is no Gradle to install.",
     "Git, and a GitHub account.",
     "The GitHub CLI (https://cli.github.com), logged in with `gh auth login`."
-  ]
+  ],
+  "repositoryPrefix": "kotlin"
 }

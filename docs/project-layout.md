@@ -7,7 +7,7 @@ How a Project is laid out in this monorepo, and which parts reach the Learner. T
 - `tooling/`: maintainer-side commands (`npm run fieldwork -- <command>`), such as `verify` and `publish`. Never shipped to Learners (ADR-0002).
 - `tracks/<track>/runner/`: that Track's Learner-side commands (`test`, `progress`, `setup`, `update`). Shipped inside every published Project of the Track. All their GitHub calls go through one adapter (`runner/src/github.ts`), which wraps the `gh` CLI and is replaced by a fake in tests.
 - `tracks/<track>/template/`: files every published Project of the Track gets as they are, such as the PR workflow and the devcontainer.
-- `tracks/<track>/track.json`: the Track's title, summary and the prerequisites a Learner installs, for the monorepo README.
+- `tracks/<track>/track.json`: the Track's title, summary, the prerequisites a Learner installs, and the prefix of its template repositories' names.
 - `tracks/<track>/projects/<project>/`: real Projects. The README lists them in folder-name order, so number the folders (`01-…`, `02-…`) to set it.
 - `tracks/<track>/fixtures/<project>/`: small Projects used to test the tooling, laid out exactly like real ones.
 
@@ -26,7 +26,7 @@ solutions/<step-id>/  Reference Solution for one Step (monorepo only)
 
 The root `README.md` is the Learner's front door. Between its `<!-- fieldwork:tracks:start -->` and `<!-- fieldwork:tracks:end -->` markers, it lists every Track and its Projects, generated from metadata. Everything outside the markers is written by hand.
 
-- **Each Track** needs a `track.json` with a `title`, a one-paragraph `summary` and a list of `prerequisites`.
+- **Each Track** needs a `track.json` with a `title`, a one-paragraph `summary`, a list of `prerequisites`, and a `repositoryPrefix` that starts its template repositories' names (`ts`, `kotlin`).
 - **Each real Project** needs these fields in its `fieldwork.json`, beside `name`, `version`, `track` and `steps`:
   - `summary`: what the Learner builds, in a sentence or two;
   - `assumes`: what the Learner should already know;
@@ -34,7 +34,7 @@ The root `README.md` is the Learner's front door. Between its `<!-- fieldwork:tr
   - `gitPractices`: the Git and GitHub practices it exercises.
 
   The three lists must each have at least one entry. Fixtures don't need these fields, as the README only lists `tracks/*/projects/`.
-- **The "Use this template" link** points to `https://github.com/<owner>/<repo>/generate`. The template repository's location is set in `tooling/src/template-repository.ts`, the one place to change once #20 decides it.
+- **The "Use this template" link** points to the Project's template repository: `https://github.com/fieldwork-learn/<repositoryPrefix>-<name>/generate`, where `repositoryPrefix` is the Track's (ADR-0003). `tooling/src/template-repository.ts` builds the name, and nothing else should.
 
 After changing any of these, run `npm run fieldwork -- readme` and commit the result. Monorepo CI runs `npm run fieldwork -- readme --check`, which fails if the README has drifted from the metadata.
 

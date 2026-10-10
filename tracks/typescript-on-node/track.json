@@ -5,5 +5,6 @@
     "Node 24 LTS, with the npm that comes with it. Each Project pins both, and `.nvmrc` names the Node version.",
     "Git, and a GitHub account.",
     "The GitHub CLI (https://cli.github.com), logged in with `gh auth login`. Projects use it to check that `main` is protected, to protect it for you (`npm run setup`) and to bring in updates (`npm run update`)."
-  ]
+  ],
+  "repositoryPrefix": "ts"
 }
