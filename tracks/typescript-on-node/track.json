@@ -1,0 +1,9 @@
+{
+  "title": "TypeScript-on-Node Track",
+  "summary": "TypeScript and modern Node together, for developers coming from JavaScript. Steps are checked by the type-checker as well as the tests, and the tests use Node's built-in test runner.",
+  "prerequisites": [
+    "Node 24 LTS, with the npm that comes with it. Each Project pins both, and `.nvmrc` names the Node version.",
+    "Git, and a GitHub account.",
+    "The GitHub CLI (https://cli.github.com), logged in with `gh auth login`. Projects use it to check that `main` is protected, to protect it for you (`npm run setup`) and to bring in updates (`npm run update`)."
+  ]
+}
