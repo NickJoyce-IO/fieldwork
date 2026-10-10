@@ -1,6 +1,6 @@
 # Project layout
 
-How a Project is laid out in this monorepo, and which parts reach the Learner. Terms follow `CONTEXT.md`. The authoring guide (#15) will build on this.
+How a Project is laid out in this monorepo, and which parts reach the Learner. Terms follow `CONTEXT.md`. To add or change a Project, start with `docs/authoring-guide.md`; this is the reference behind it.
 
 ## Where things live in the monorepo
 
