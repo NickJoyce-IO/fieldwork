@@ -2,11 +2,11 @@
 
 How to add a Project to Fieldwork, or change one. Terms follow `CONTEXT.md`. `docs/project-layout.md` is the reference for where each file lives and what the tooling does with it; this guide is the order to do things in, and the rules a Project has to keep.
 
-The TypeScript-on-Node Track is the only one with tooling so far, so the examples are TypeScript. The rules apply to every Track.
+The TypeScript-on-Node Track is the only one with tooling so far, so the examples and the rules for tests are TypeScript-on-Node ones. Everything else applies to every Track.
 
 ## What a Project is made of
 
-A Project has four kinds of content, owned by different people:
+A Project has four kinds of content. The Learner owns Learner Code; the maintainers own the rest:
 
 - **Learner Code** (`src/`): what the Learner writes and owns. In the monorepo, `src/` holds the **starter code**: the files the Learner starts from, with stubs that fail every Step. Project Updates never touch it, so get its shape right before the first publish.
 - **Project Content** (`steps/<step-id>/`): one folder per Step, owned by the maintainers. Each holds the Step's instructions (`README.md`), its Hints (`HINTS.md`) and its tests (`*.test.ts`). Project Updates replace it.
@@ -51,7 +51,7 @@ Fill in `fieldwork.json`:
 - **`summary`, `assumes`, `concepts` and `gitPractices`** feed the monorepo README. Write `assumes` for a Learner deciding whether to start here.
 - **Each Step's `id`** is its folder name in `steps/` and `solutions/`. Prefix ids with a number so the folders sort in order. The runner numbers Steps from 1 by their position in this list, whatever the id says.
 
-Leave `package.json` and `tsconfig.json` as the fixture has them unless the Project needs more, apart from `package.json`'s `description`, which is for maintainers (`publish` drops it). Any dependency you add must already be in the monorepo's `package-lock.json`, because `publish` builds the Project's lockfile from it offline. Add it to the monorepo first if it isn't.
+In `package.json`, set `name` to the Project's name, as `publish` ships it unchanged, and replace the fixture's `description` with one for maintainers (`publish` drops it). Otherwise leave `package.json` and `tsconfig.json` as the fixture has them unless the Project needs more. Any dependency you add must already be in the monorepo's `package-lock.json`, because `publish` builds the Project's lockfile from it offline. Add it to the monorepo first if it isn't.
 
 ### 3. Write the starter code
 
@@ -64,14 +64,14 @@ export function greet(name: string): string {
 ```
 
 - **Export everything the Steps' tests import,** with the signatures the tests use. A test that cannot even load because a file is missing gives the Learner a worse first message than a failing assertion.
-- **Type the stubs fully.** The type-checker is part of every Step's check, so a stub's types are part of the lesson.
+- **Type the stubs fully.** The type-checker is part of every Step's check, so a stub's types are part of what the Learner learns.
 - **A Step added in a later version** can't add starter files, because Project Updates never touch `src/`. Its instructions must ask the Learner to create any new file it needs.
 
 ### 4. Write each Step
 
 Each `steps/<step-id>/` holds:
 
-- **`README.md`, the instructions.** Start with `# Step <N>: <title>`, where N is the number the Learner sees. Open with the real-world problem the Step solves, the way a teammate would describe it, before saying what to build. Then say exactly what makes the Step pass. Link to `HINTS.md` at the end.
+- **`README.md`, the instructions.** Start with `# Step <N>: <title>`, where N is the number the Learner sees. Open with the real-world problem the Step solves, the way a teammate would describe it, before saying what to build. Then say exactly what makes the Step pass. End with a link to `HINTS.md`, followed by any credit for borrowed material (see [Borrowing](#borrowing-a-problem-from-an-mit-source)).
 - **`HINTS.md`, the Hints.** Each Hint unblocks a Learner without giving the answer: point at the concept, the API or the docs page, or explain what a failure message means. Write Hints for the places Learners really get stuck, headed by the symptom ("`fetch` returns a Promise, not the data").
 - **`*.test.ts`, the tests.** They define the Step.
 
@@ -81,7 +81,7 @@ Rules for tests:
 - **Test behaviour the instructions describe,** not one particular implementation. The Learner's code passing the tests should mean they did what the Step asked.
 - **Never touch the network or the real clock.** Inject what the code depends on, such as the `fetch` implementation, timers or the cache directory, and pass fakes in the tests. Tests must be fast and give the same result every run.
 - **Type errors count.** A Step passes only if `tsc` finds no errors in Learner Code and in that Step's own folder, and its tests pass. Errors in a later Step's folder don't block an earlier one.
-- **Type-only Steps** check types at compile time, with no runtime tests. Write the assertions as types, so a wrong type is a compile error in the Step's folder:
+- **Type-only Steps** check types at compile time, with no runtime tests. Write the assertions as types, so a wrong type is a compile error in the Step's folder. The file must still be named `*.test.ts`, because the runner only looks at those files and a Step without one never passes. It needs no `test()` calls:
 
   ```ts
   import type { Pair } from "../../src/pair.ts";
@@ -119,7 +119,7 @@ npm run fieldwork -- verify tracks/<track>/projects/<NN>-<name>
 - the starter code fails every Step, each checked on its own, so no Step can be passed without doing the work;
 - Step N's Reference Solution passes Steps 1 to N, so every Step can be solved in order;
 - Step N's Reference Solution fails Step N+1, so every Step needs new work;
-- once the Project has been published, no published Step has got stricter (see [Versions](#versions)).
+- `version` is `major.minor.patch`, and, once the Project has been published, its published Steps are still in place and no stricter (see [Versions](#versions)).
 
 When a check fails, it names the Step and what went wrong.
 
@@ -150,7 +150,13 @@ A Project's `version` follows semver, because Project Updates rely on it to know
 
 The rule underneath: **within a major version, a published Step's tests may be fixed but never made stricter.** A Learner who completed a Step must still pass it after a patch or minor update.
 
-`verify` enforces this. It compares the Project with its last published version (the highest `<name>@<version>` tag) and runs each published Step's Reference Solution, as published, against the Steps as they are now. If one fails, the Step got stricter, and `verify` asks for a major version. It also fails a version that isn't `major.minor.patch`, or that is lower than the last published one. A Project that has never been published has no tag, so anything goes until its first publish.
+`verify` enforces this. It always fails a version that isn't `major.minor.patch`. It then compares the Project with its last published version (the highest `<name>@<version>` tag):
+
+- The version must not be lower than the published one.
+- Within the same major version, each published Step must still be in the same place with the same `id`, so removing or reordering a Step fails.
+- Each published Step's Reference Solution, as published, must still pass the Steps as they are now. If one fails, the Step got stricter.
+
+Each failure asks for a major version. A Project that has never been published has no tag, so until its first publish only the version's format is checked.
 
 Major updates reach a Learner only when they ask for them with `npm run update -- --major`. Keep them rare.
 
@@ -163,7 +169,7 @@ Every pull request and push to `main` in the monorepo runs, in order:
 3. `npm run fieldwork -- verify`: every Project under `tracks/*/projects/`, as in [Verify locally](#6-verify-locally).
 4. `npm run fieldwork -- readme --check`: the README's listings match the metadata.
 
-Run the same commands locally before opening a pull request, and it should pass. A failing check blocks the merge, so a broken Project can't be published.
+Run the same commands locally before opening a pull request, and it should pass. Don't merge a pull request whose checks fail: a Project is only published from `main`, so a broken one must never reach it.
 
 ## Borrowing a problem from an MIT source
 
@@ -181,10 +187,11 @@ Some good problems already exist in MIT-licensed collections, such as Exercism's
 
   <The source's copyright line, exactly as in its LICENSE file>
 
-  <The MIT permission notice, copied in full from the source's LICENSE file>
+  <The rest of the source's LICENSE file, copied in full: the permission notice and the warranty disclaimer>
   ```
 
   `publish` copies each Step folder whole, so the notice goes everywhere the material does.
+- **Keep borrowed material out of `src/`.** Starter code reaches every Learner, but a Project Update can never correct or remove it, so write it yourself.
 - **Credit the source in the Step's instructions** with one line at the end of its `README.md`, for an idea as well as for copied material: "Based on <source>, see [NOTICE.md](NOTICE.md)", or "Based on an idea from <source>" when there is no notice.
 - **Never copy a source's solutions into `solutions/`.** Write the Reference Solutions yourself.
 

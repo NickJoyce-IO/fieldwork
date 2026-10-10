@@ -4,7 +4,7 @@ Thanks for helping. Fieldwork is a set of free, test-driven learning Projects, s
 
 ## Before you start
 
-- **Read `CONTEXT.md`.** It defines the words used everywhere here: Learner, Track, Project, Step, Hint, Reference Solution, Project Content, Learner Code and Project Update. Use them in code, docs and pull requests, and avoid the alternatives it lists.
+- **Read `CONTEXT.md`.** It defines the words used everywhere here, such as Learner, Track, Project, Step, Hint, Reference Solution, Project Content, Learner Code and Project Update. Use them in code, docs and pull requests, and avoid the alternatives it lists.
 - **Open an issue first** for a new Project, a change of Step order, or anything that needs a major version. These are hard to undo once Learners have them. Typos, Hint improvements and clear bug fixes can go straight to a pull request.
 - **Set up locally:** Node 24 (see `.nvmrc`) and npm, then `npm ci` at the repository root.
 
@@ -27,7 +27,7 @@ If you changed a Project's metadata, run `npm run fieldwork -- readme` and commi
 
 ## Pull requests
 
-- Work on a branch and open a pull request against `main`. All four checks above must pass before it merges.
+- Work on a branch and open a pull request against `main`. CI runs the four checks above on it, and it is only merged once they pass.
 - Keep a pull request to one change. Reference the issue it addresses (`Closes #12`).
 - When a pull request changes a published Project, bump its `version` by the rules in the authoring guide, and say in the description what the change means for Learners.
 
