@@ -1,4 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +32,16 @@ const tracks: Record<string, TrackRunner> = {
 
 export function trackRunner(track: string): TrackRunner | undefined {
   return tracks[track];
+}
+
+/** The real Projects in a Track's folder (tracks/<track>/projects/*), in folder-name order. */
+export function trackProjects(trackDir: string): string[] {
+  const projectsDir = join(trackDir, "projects");
+  if (!existsSync(projectsDir)) return [];
+  return readdirSync(projectsDir)
+    .sort()
+    .map((project) => join(projectsDir, project))
+    .filter((dir) => existsSync(join(dir, "fieldwork.json")));
 }
 
 function countPassedSteps(result: SpawnSyncReturns<string>): StepRun {

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { useThisTemplateUrl } from "../template-repository.ts";
-import { repoRoot } from "../tracks.ts";
+import { repoRoot, trackProjects } from "../tracks.ts";
 
 const startMarker = "<!-- fieldwork:tracks:start -->";
 const endMarker = "<!-- fieldwork:tracks:end -->";
@@ -74,13 +74,7 @@ function listings(root: string): string {
 
 function trackSection(root: string, trackDir: string): string {
   const track = readTrack(root, join(trackDir, "track.json"));
-  const projectsDir = join(trackDir, "projects");
-  const projects = existsSync(projectsDir)
-    ? readdirSync(projectsDir)
-        .filter((project) => existsSync(join(projectsDir, project, "fieldwork.json")))
-        .sort()
-        .map((project) => readProject(root, join(projectsDir, project, "fieldwork.json")))
-    : [];
+  const projects = trackProjects(trackDir).map((dir) => readProject(root, join(dir, "fieldwork.json")));
 
   return [
     `## ${track.title}`,

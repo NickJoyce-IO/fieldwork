@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { repoRoot } from "../tracks.ts";
+import { repoRoot, trackProjects } from "../tracks.ts";
 import { verifyProject } from "../verify-project.ts";
 
 /**
@@ -32,11 +32,5 @@ export async function verifyCommand(args: string[]): Promise<number> {
 
 function monorepoProjects(): string[] {
   const tracksDir = join(repoRoot, "tracks");
-  return readdirSync(tracksDir).flatMap((track) => {
-    const projectsDir = join(tracksDir, track, "projects");
-    if (!existsSync(projectsDir)) return [];
-    return readdirSync(projectsDir)
-      .map((project) => join(projectsDir, project))
-      .filter((dir) => existsSync(join(dir, "fieldwork.json")));
-  });
+  return readdirSync(tracksDir).flatMap((track) => trackProjects(join(tracksDir, track)));
 }

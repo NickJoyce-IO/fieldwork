@@ -76,7 +76,8 @@ test("readme lists each Track's prerequisites and its Projects' metadata, with a
   assert.match(text, /Knowledge for paginated-api/);
   assert.match(text, /Concept for paginated-api/);
   assert.match(text, /Git practice for paginated-api/);
-  assert.match(text, /https:\/\/github\.com\/NickJoyce-IO\/fieldwork-paginated-api\/generate/);
+  // Where template repositories live is still to be decided (#20), so only the link's shape is checked.
+  assert.match(text, /\[Use this template\]\(https:\/\/github\.com\/[\w.-]+\/[\w.-]*paginated-api\/generate\)/);
 });
 
 test("readme keeps the hand-written parts of the README around the generated listings", () => {
