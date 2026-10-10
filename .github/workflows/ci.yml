@@ -26,3 +26,7 @@ jobs:
       # version (docs/project-layout.md).
       - name: Verify every Project
         run: npm run fieldwork -- verify
+      # The README's Track and Project listings are generated from track.json
+      # and fieldwork.json, so they must not drift from them.
+      - name: Check the README matches the metadata
+        run: npm run fieldwork -- readme --check

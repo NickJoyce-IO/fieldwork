@@ -1,0 +1,9 @@
+{
+  "title": "Kotlin Track",
+  "summary": "Kotlin, progressing into Spring Boot. Steps run as Gradle tasks, so the Kotlin toolchain is all you need.",
+  "prerequisites": [
+    "JDK 21. Each Project ships the Gradle wrapper, so there is no Gradle to install.",
+    "Git, and a GitHub account.",
+    "The GitHub CLI (https://cli.github.com), logged in with `gh auth login`."
+  ]
+}
