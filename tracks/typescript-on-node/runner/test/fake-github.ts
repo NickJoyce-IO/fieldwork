@@ -1,13 +1,14 @@
 // A fake GitHub adapter kept in a JSON file, so a test and the CLI process it
 // spawns share one fake repository. The CLI loads it through
 // FIELDWORK_GITHUB_ADAPTER (see fakeGitHubEnv in helpers.ts).
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
   GitHubError,
   type BranchProtection,
   type GitHub,
   type GitHubProblem,
   type Issue,
+  type PullRequest,
   type Ruleset,
 } from "../src/github.ts";
 
@@ -21,6 +22,9 @@ export interface FakeRuleset extends Ruleset {
 interface State {
   issues: Issue[];
   rulesets: FakeRuleset[];
+  /** A directory holding the template repository's files; unset for a repository not made from a template. */
+  template?: string;
+  pullRequests?: PullRequest[];
   /**
    * When set, every call fails the way the real adapter does for this problem,
    * or with an error the Learner cannot fix, such as GitHub being down.
@@ -50,6 +54,15 @@ export class FakeGitHub implements GitHub {
 
   setRulesets(rulesets: FakeRuleset[]): void {
     this.setState({ ...this.state(), rulesets });
+  }
+
+  /** Makes this a repository created from a template whose files are in `dir`. */
+  setTemplate(dir: string): void {
+    this.setState({ ...this.state(), template: dir });
+  }
+
+  pullRequests(): PullRequest[] {
+    return this.state().pullRequests ?? [];
   }
 
   failWith(problem: GitHubProblem | "unexpected"): void {
@@ -103,6 +116,18 @@ export class FakeGitHub implements GitHub {
     const rulesets = this.stateOrFailure().rulesets;
     if (!rulesets.some((existing) => existing.id === id)) throw new Error(`Ruleset ${id} not found`);
     this.setRulesets(rulesets.map((existing) => (existing.id === id ? { ...asCreated(ruleset), id } : existing)));
+  }
+
+  async downloadTemplate(dir: string): Promise<void> {
+    const { template } = this.stateOrFailure();
+    if (template === undefined) throw new GitHubError("not-from-template");
+    cpSync(template, dir, { recursive: true });
+  }
+
+  async createPullRequest(pullRequest: PullRequest): Promise<string> {
+    const pullRequests = [...this.pullRequests(), pullRequest];
+    this.setState({ ...this.stateOrFailure(), pullRequests });
+    return `https://github.com/learner/project/pull/${pullRequests.length}`;
   }
 
   private state(): State {

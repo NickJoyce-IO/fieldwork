@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { GitHubError, type GitHub } from "../src/github.ts";
 
@@ -12,7 +15,8 @@ export interface CreatedResources {
  * What every GitHub adapter must do, run against the fake on every test run
  * and against real GitHub when enabled (github.test.ts). The repository may
  * hold other issues and rulesets, so each test only looks at what it creates,
- * and rulesets target a branch of their own, never main.
+ * and rulesets target a branch of their own, never main. It must have been
+ * created from a published Project's template repository.
  */
 export function githubContract(
   name: string,
@@ -67,6 +71,16 @@ export function githubContract(
 
     await github.updateRuleset(listed.id, { name, branch, requiredChecks: ["Second check"] });
     assert.deepEqual(await github.branchProtection(branch), { requiresPullRequest: true, requiredChecks: ["Second check"] });
+  });
+
+  contractTest("downloading the template gives its files, with Project metadata but no Git history", async (github) => {
+    const dir = join(mkdtempSync(join(tmpdir(), "fieldwork-template-")), "template");
+
+    await github.downloadTemplate(dir);
+
+    const metadata = JSON.parse(readFileSync(join(dir, "fieldwork.json"), "utf8")) as { version: string };
+    assert.match(metadata.version, /^\d+\.\d+\.\d+$/);
+    assert.equal(existsSync(join(dir, ".git")), false);
   });
 
   test(`${name}: without a login, calls fail as not authenticated`, { skip: options.skip }, async () => {

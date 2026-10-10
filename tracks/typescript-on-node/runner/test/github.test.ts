@@ -4,10 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GhCli } from "../src/github.ts";
 import { githubContract } from "./github-contract.ts";
-import { fakeGitHub } from "./helpers.ts";
+import { fakeGitHub, fixturesDir } from "./helpers.ts";
 
 githubContract("fake GitHub", {
-  connect: () => fakeGitHub(),
+  connect: () => {
+    const github = fakeGitHub();
+    github.setTemplate(join(fixturesDir, "hello-steps"));
+    return github;
+  },
   connectUnauthenticated: () => {
     const github = fakeGitHub();
     github.failWith("not-authenticated");
@@ -17,7 +21,8 @@ githubContract("fake GitHub", {
 
 // Creates, edits, pins, then unpins and closes real issues in the named
 // repository, and creates then deletes rulesets on throwaway branch names
-// (never main), using your `gh` login:
+// (never main), using your `gh` login. The repository must have been created
+// from a published Project's template:
 //   FIELDWORK_GITHUB_CONTRACT_REPO=<owner>/<repo> npm test
 const repo = process.env.FIELDWORK_GITHUB_CONTRACT_REPO;
 
