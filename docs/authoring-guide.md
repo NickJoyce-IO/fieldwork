@@ -46,7 +46,7 @@ Fill in `fieldwork.json`:
 }
 ```
 
-- **`name`** is the Project's permanent identifier. It names its template repository and its version tags (`<name>@<version>`), so never change it once published.
+- **`name`** is the Project's permanent identifier. It names its template repository (`fieldwork-learn/<Track prefix>-<name>`, see ADR-0003) and its version tags (`<name>@<version>`), so never change it once published.
 - **`version`** starts at `0.1.0`.
 - **`summary`, `assumes`, `concepts` and `gitPractices`** feed the monorepo README. Write `assumes` for a Learner deciding whether to start here.
 - **Each Step's `id`** is its folder name in `steps/` and `solutions/`. Prefix ids with a number so the folders sort in order. The runner numbers Steps from 1 by their position in this list, whatever the id says.

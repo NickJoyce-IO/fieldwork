@@ -15,6 +15,7 @@ const typescriptTrack = {
   title: "TypeScript-on-Node",
   summary: "TypeScript and modern Node together.",
   prerequisites: ["Node 24 LTS", "npm"],
+  repositoryPrefix: "ts",
 };
 
 function project(name: string, overrides: Record<string, unknown> = {}) {
@@ -76,8 +77,8 @@ test("readme lists each Track's prerequisites and its Projects' metadata, with a
   assert.match(text, /Knowledge for paginated-api/);
   assert.match(text, /Concept for paginated-api/);
   assert.match(text, /Git practice for paginated-api/);
-  // Where template repositories live is still to be decided (#20), so only the link's shape is checked.
-  assert.match(text, /\[Use this template\]\(https:\/\/github\.com\/[\w.-]+\/[\w.-]*paginated-api\/generate\)/);
+  // Templates live in the fieldwork-learn org, named <Track prefix>-<Project name> (ADR-0003).
+  assert.match(text, /\[Use this template\]\(https:\/\/github\.com\/fieldwork-learn\/ts-paginated-api\/generate\)/);
 });
 
 test("readme keeps the hand-written parts of the README around the generated listings", () => {
@@ -92,7 +93,7 @@ test("readme keeps the hand-written parts of the README around the generated lis
 
 test("readme lists Projects in folder order, and says when a Track has none yet", () => {
   const root = monorepo({
-    kotlin: { track: { title: "Kotlin", summary: "Kotlin, then Spring Boot.", prerequisites: ["JDK 21"] } },
+    kotlin: { track: { title: "Kotlin", summary: "Kotlin, then Spring Boot.", prerequisites: ["JDK 21"], repositoryPrefix: "kotlin" } },
     "typescript-on-node": {
       track: typescriptTrack,
       projects: { "02-second": project("zebra"), "01-first": project("yak") },
@@ -153,6 +154,17 @@ test("readme refuses a Project whose metadata is missing a listing field, naming
   assert.match(output, /paginated-api/);
   assert.match(output, /gitPractices/);
   assert.equal(readme(root), before);
+});
+
+test("readme refuses a Track without a repository prefix, naming the field", () => {
+  const { repositoryPrefix, ...withoutPrefix } = typescriptTrack;
+  const root = monorepo({ "typescript-on-node": { track: withoutPrefix } });
+
+  const { exitCode, output } = runFieldwork(["readme", root]);
+
+  assert.equal(exitCode, 2);
+  assert.match(output, /track\.json/);
+  assert.match(output, /repositoryPrefix/);
 });
 
 test("readme refuses a README without the generated section's markers", () => {

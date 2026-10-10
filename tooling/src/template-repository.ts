@@ -1,13 +1,16 @@
+/** The GitHub org holding the monorepo and every Project's template repository (ADR-0003). */
+export const templateOwner = "fieldwork-learn";
+
 /**
- * The template repository a Project is published to, as `<owner>/<repo>`.
- * Where templates live, and how they are named, is still to be decided (#20):
- * this is the one place to change when it is.
+ * The template repository a Project is published to, as `<owner>/<repo>`:
+ * `<Track's repositoryPrefix>-<Project name>`, so Projects of the same name
+ * in different Tracks can't clash (ADR-0003).
  */
-export function templateRepository(projectName: string): string {
-  return `NickJoyce-IO/fieldwork-${projectName}`;
+export function templateRepository(repositoryPrefix: string, projectName: string): string {
+  return `${templateOwner}/${repositoryPrefix}-${projectName}`;
 }
 
 /** The link that creates a Learner's own repository from a Project's template. */
-export function useThisTemplateUrl(projectName: string): string {
-  return `https://github.com/${templateRepository(projectName)}/generate`;
+export function useThisTemplateUrl(repositoryPrefix: string, projectName: string): string {
+  return `https://github.com/${templateRepository(repositoryPrefix, projectName)}/generate`;
 }
